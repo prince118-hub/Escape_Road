@@ -274,7 +274,6 @@ export class CollisionSystem {
     // Create visual effects
     if (this.effectsSystem) {
       this.effectsSystem.createCollisionEffect(playerPos, 1.2);
-      this.effectsSystem.createDamageIndicator(playerPos, damage);
     }
 
     // Play sound

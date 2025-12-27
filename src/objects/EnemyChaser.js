@@ -313,11 +313,11 @@ export class EnemyChaser {
     const blinkSpeed = 3; // Blinks per second
 
     if (Math.floor(this.lightBlinkTime * blinkSpeed) % 2 === 0) {
-      this.lights[0].material.emissive = new THREE.Color(0xff0000);
-      this.lights[1].material.emissive = new THREE.Color(0x000000);
+      this.lights[0].material.color.setHex(0xff0000);
+      this.lights[1].material.color.setHex(0x000000);
     } else {
-      this.lights[0].material.emissive = new THREE.Color(0x000000);
-      this.lights[1].material.emissive = new THREE.Color(0x0000ff);
+      this.lights[0].material.color.setHex(0x000000);
+      this.lights[1].material.color.setHex(0x0000ff);
     }
   }
 

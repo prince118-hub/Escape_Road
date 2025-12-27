@@ -28,6 +28,10 @@ export class PlayerCar {
     this.wheels = [];
     this.isFalling = false;
     this.fallSpeed = 0;
+    // Collision reverse state (used by CollisionSystem for building collisions)
+    this.isColliding = false;
+    this.collisionReverseTimer = 0;
+    this.collisionReverseDirection = { x: 0, z: 0 };
     // Caught by police state
     this.isCaught = false;
     this.caughtTimer = 0;
@@ -119,6 +123,35 @@ export class PlayerCar {
       this._updateMesh();
       return;
     }
+
+    // Handle collision reverse movement
+    if (this.isColliding && this.collisionReverseTimer > 0) {
+      const reverseSpeed = 8;
+      this.position.x +=
+        this.collisionReverseDirection.x * reverseSpeed * deltaTime;
+      this.position.z +=
+        this.collisionReverseDirection.z * reverseSpeed * deltaTime;
+
+      this.velocity.x = 0;
+      this.velocity.z = 0;
+
+      this.collisionReverseTimer -= deltaTime;
+      if (this.collisionReverseTimer <= 0) {
+        this.isColliding = false;
+        this.collisionReverseTimer = 0;
+        this.collisionReverseDirection = { x: 0, z: 0 };
+      }
+
+      this._animateWheels(deltaTime);
+      this._updateMesh();
+      const distDelta =
+        Math.sqrt(
+          this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z
+        ) * deltaTime;
+      this.distanceTraveled += distDelta;
+      return;
+    }
+
     this._updateBoost(deltaTime);
     this._applyInput(deltaTime);
     this._updatePosition(deltaTime);
@@ -230,15 +263,15 @@ export class PlayerCar {
   activateBoost() {
     this.boostActive = true;
     this.boostTimeRemaining = PLAYER_CONFIG.BOOST_DURATION;
-    this.mesh.children[0].material.emissive = new THREE.Color(0xff6600);
-    this.mesh.children[0].material.emissiveIntensity = 0.5;
+    // Create boost glow by brightening the car color
+    this.mesh.children[0].material.color.setHex(0xff6633);
   }
 
   deactivateBoost() {
     this.boostActive = false;
     this.boostCooldownRemaining = PLAYER_CONFIG.BOOST_COOLDOWN;
-    this.mesh.children[0].material.emissive = new THREE.Color(0x000000);
-    this.mesh.children[0].material.emissiveIntensity = 0;
+    // Restore original car color
+    this.mesh.children[0].material.color.setHex(COLORS.PLAYER_CAR);
   }
 
   takeDamage(amount) {
