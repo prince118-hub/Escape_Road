@@ -28,10 +28,11 @@ export class PlayerCar {
     this.wheels = [];
     this.isFalling = false;
     this.fallSpeed = 0;
-    // Collision reverse state (used by CollisionSystem for building collisions)
-    this.isColliding = false;
-    this.collisionReverseTimer = 0;
-    this.collisionReverseDirection = { x: 0, z: 0 };
+    // Building collision crash state (physics-based crash system)
+    this.isCrashed = false;
+    this.crashStunTimer = 0; // Brief moment of being stunned after crash
+    this.crashReverseTimer = 0; // Auto-reverse after stun
+    this.crashReverseDirection = { x: 0, z: 0 };
     // Caught by police state
     this.isCaught = false;
     this.caughtTimer = 0;
@@ -124,32 +125,54 @@ export class PlayerCar {
       return;
     }
 
-    // Handle collision reverse movement
-    if (this.isColliding && this.collisionReverseTimer > 0) {
-      const reverseSpeed = 8;
-      this.position.x +=
-        this.collisionReverseDirection.x * reverseSpeed * deltaTime;
-      this.position.z +=
-        this.collisionReverseDirection.z * reverseSpeed * deltaTime;
+    // Handle building crash physics (stun + auto-reverse)
+    if (this.isCrashed) {
+      // Phase 1: Stun - car is completely stopped, no control
+      if (this.crashStunTimer > 0) {
+        this.velocity.x = 0;
+        this.velocity.z = 0;
+        this.speed = 0;
+        this.crashStunTimer -= deltaTime;
 
-      this.velocity.x = 0;
-      this.velocity.z = 0;
+        // Visual feedback: shake the mesh slightly during stun
+        if (this.mesh) {
+          const shakeIntensity = 0.05;
+          this.mesh.position.x =
+            this.position.x + (Math.random() - 0.5) * shakeIntensity;
+          this.mesh.position.z =
+            this.position.z + (Math.random() - 0.5) * shakeIntensity;
+        }
 
-      this.collisionReverseTimer -= deltaTime;
-      if (this.collisionReverseTimer <= 0) {
-        this.isColliding = false;
-        this.collisionReverseTimer = 0;
-        this.collisionReverseDirection = { x: 0, z: 0 };
+        this._updateMesh();
+        return;
       }
 
-      this._animateWheels(deltaTime);
-      this._updateMesh();
-      const distDelta =
-        Math.sqrt(
-          this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z
-        ) * deltaTime;
-      this.distanceTraveled += distDelta;
-      return;
+      // Phase 2: Auto-reverse - car automatically backs away from building
+      if (this.crashReverseTimer > 0) {
+        const reverseSpeed = 20; // Very fast escape
+        this.position.x +=
+          this.crashReverseDirection.x * reverseSpeed * deltaTime;
+        this.position.z +=
+          this.crashReverseDirection.z * reverseSpeed * deltaTime;
+
+        this.velocity.x = 0;
+        this.velocity.z = 0;
+        this.speed = 0;
+
+        this.crashReverseTimer -= deltaTime;
+
+        if (this.crashReverseTimer <= 0) {
+          // Crash recovery complete - return to normal
+          this.isCrashed = false;
+          this.crashReverseTimer = 0;
+          this.crashStunTimer = 0;
+          this.crashReverseDirection = { x: 0, z: 0 };
+        }
+
+        this._animateWheels(deltaTime);
+        this._updateMesh();
+        return;
+      }
     }
 
     this._updateBoost(deltaTime);

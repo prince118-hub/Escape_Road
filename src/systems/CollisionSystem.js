@@ -138,6 +138,11 @@ export class CollisionSystem {
    * @private
    */
   _checkPlayerBuildingCollisions() {
+    // Skip building collision checks while car is in crash recovery
+    if (this.playerRef.isCrashed) {
+      return;
+    }
+
     const playerBox = this.playerRef.getBoundingBox();
     const buildings = this.cityRef.getBuildings();
     const playerRadius = 1.5;
@@ -161,7 +166,7 @@ export class CollisionSystem {
 
       if (checkAABBCollision(playerBox, buildingBox)) {
         this._handlePlayerBuildingCollision(building, buildingBox);
-        // Don't break - check all buildings for multi-building collisions
+        return; // Only handle one building collision at a time
       }
     }
   }
@@ -172,9 +177,19 @@ export class CollisionSystem {
    */
   _handlePlayerBuildingCollision(building, buildingBox) {
     const playerPos = this.playerRef.getPosition();
-    const playerRadius = 1.5; // Player collision radius
+    const playerRadius = 1.5;
 
-    // Calculate collision normal (push direction)
+    // Calculate impact speed for damage calculation
+    const impactSpeed = Math.sqrt(
+      this.playerRef.velocity.x ** 2 + this.playerRef.velocity.z ** 2
+    );
+
+    // Stop the player immediately (CRASH!)
+    this.playerRef.velocity.x = 0;
+    this.playerRef.velocity.z = 0;
+    this.playerRef.speed = 0;
+
+    // Calculate collision normal (direction to push away)
     const buildingCenter = {
       x: (buildingBox.min.x + buildingBox.max.x) / 2,
       z: (buildingBox.min.z + buildingBox.max.z) / 2,
@@ -184,58 +199,72 @@ export class CollisionSystem {
     const dz = playerPos.z - buildingCenter.z;
     const distance = Math.sqrt(dx * dx + dz * dz);
 
-    // Determine which face was hit
-    const buildingWidth = buildingBox.max.x - buildingBox.min.x;
-    const buildingDepth = buildingBox.max.z - buildingBox.min.z;
-
     const normalizedDx = distance > 0 ? dx / distance : 1;
     const normalizedDz = distance > 0 ? dz / distance : 0;
 
-    // Calculate which face is closest
+    // Determine which face was hit
+    const buildingWidth = buildingBox.max.x - buildingBox.min.x;
+    const buildingDepth = buildingBox.max.z - buildingBox.min.z;
     const absNormDx = Math.abs(dx) / buildingWidth;
     const absNormDz = Math.abs(dz) / buildingDepth;
 
-    // Stop the player completely
-    this.playerRef.velocity.x = 0;
-    this.playerRef.velocity.z = 0;
-
-    // Push player out of building and set reverse direction
+    // Push player slightly out of building (minimal - let auto-reverse handle the rest)
+    const minClearance = playerRadius + 2.0;
     if (absNormDx > absNormDz) {
       // Hit left or right side
       this.playerRef.position.x =
         normalizedDx > 0
-          ? buildingBox.max.x + playerRadius
-          : buildingBox.min.x - playerRadius;
+          ? buildingBox.max.x + minClearance
+          : buildingBox.min.x - minClearance;
       // Set reverse direction
-      this.playerRef.collisionReverseDirection.x = normalizedDx > 0 ? -1 : 1;
-      this.playerRef.collisionReverseDirection.z = 0;
+      this.playerRef.crashReverseDirection.x = normalizedDx > 0 ? 1 : -1;
+      this.playerRef.crashReverseDirection.z = 0;
     } else {
       // Hit front or back
       this.playerRef.position.z =
         normalizedDz > 0
-          ? buildingBox.max.z + playerRadius
-          : buildingBox.min.z - playerRadius;
+          ? buildingBox.max.z + minClearance
+          : buildingBox.min.z - minClearance;
       // Set reverse direction
-      this.playerRef.collisionReverseDirection.x = 0;
-      this.playerRef.collisionReverseDirection.z = normalizedDz > 0 ? -1 : 1;
+      this.playerRef.crashReverseDirection.x = 0;
+      this.playerRef.crashReverseDirection.z = normalizedDz > 0 ? 1 : -1;
     }
 
-    // Start collision state
-    this.playerRef.isColliding = true;
-    this.playerRef.collisionReverseTimer = 0.3; // 300ms reverse duration
+    // Start crash sequence: stun then auto-reverse
+    this.playerRef.isCrashed = true;
+    this.playerRef.crashStunTimer = 0.5; // 500ms stun (car stopped completely)
+    this.playerRef.crashReverseTimer = 0.7; // 700ms auto-reverse after stun
 
-    // Set cooldown
-    this.collisionCooldown = this.cooldownDuration;
+    // Damage scales with impact speed
+    const baseDamage = 20;
+    const speedDamage = impactSpeed * 0.8;
+    const totalDamage = Math.min(50, baseDamage + speedDamage);
+    this.playerRef.takeDamage(totalDamage);
 
-    // Create visual effects
+    // Extended cooldown to prevent re-collision during recovery
+    this.collisionCooldown = 1500; // 1.5 seconds
+
+    // Enhanced visual effects based on impact
+    const effectIntensity = Math.min(1.5, 0.5 + impactSpeed / 25);
     if (this.effectsSystem) {
-      this.effectsSystem.createCollisionEffect(playerPos, 0.5);
-      this.effectsSystem.createSparks(playerPos, { x: dx, z: dz });
+      this.effectsSystem.createCollisionEffect(playerPos, effectIntensity);
+      this.effectsSystem.createSparks(playerPos, { x: normalizedDx, z: normalizedDz });
+      
+      // Extra debris for high-speed crashes
+      if (impactSpeed > 15) {
+        setTimeout(() => {
+          this.effectsSystem.createCollisionEffect(
+            { x: playerPos.x, y: 1, z: playerPos.z },
+            0.8
+          );
+        }, 100);
+      }
     }
 
-    // Play sound
+    // Sound with intensity based on impact
     if (this.soundSystem) {
-      this.soundSystem.playCollisionSound(0.5);
+      const volume = Math.min(1.0, 0.4 + impactSpeed / 30);
+      this.soundSystem.playCollisionSound(volume);
     }
   }
 
