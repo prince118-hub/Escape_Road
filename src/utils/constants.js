@@ -39,15 +39,13 @@ export const PLAYER_CONFIG = {
   WIDTH: 2,
   HEIGHT: 1.2,
   LENGTH: 3.5,
-  WHEEL_RADIUS: 0.4,
-  WHEEL_WIDTH: 0.3,
   MAX_HEALTH: 100,
   COLLISION_DAMAGE: 25,
 };
 
 export const ENEMY_CONFIG = {
-  INITIAL_SPEED: 20,
-  CATCH_UP_SPEED: 24,
+  INITIAL_SPEED: 18, // Slightly faster base speed
+  CATCH_UP_SPEED: 23, // Good catchup speed when far away
   MIN_DISTANCE: 8,
   MAX_DISTANCE: 50,
   ROTATION_SPEED: 0.06,
@@ -56,20 +54,18 @@ export const ENEMY_CONFIG = {
   MAX_COUNT: 8,
   SPAWN_INTERVAL: 20000,
   SPEED_INCREASE_RATE: 0.001,
-  MAX_SPEED: 30,
+  MAX_SPEED: 32, // Slightly faster than player's normal speed (28) but slower than boost
   WIDTH: 2.2,
   HEIGHT: 1.2,
   LENGTH: 4,
-  WHEEL_RADIUS: 0.4,
-  WHEEL_WIDTH: 0.3,
 };
 
 // Wanted level system (GTA-style stars)
 export const WANTED_CONFIG = {
   MAX_WANTED_LEVEL: 5, // Maximum 5 stars
   WANTED_THRESHOLDS: [0, 20, 40, 70, 100], // Time in seconds to reach each star (faster progression)
-  BASE_POLICE_COUNT: 3, // Initial police count at 1 star
-  POLICE_PER_STAR: 3, // Additional 3 police for each star level (more aggressive)
+  BASE_POLICE_COUNT: 5, // Initial police count at 1 star
+  POLICE_PER_STAR: 5, // Additional 3 police for each star level (more aggressive)
   BASE_SPAWN_INTERVAL: 8, // Base time (seconds) between police spawns (faster)
   SPAWN_INTERVAL_REDUCTION: 1.5, // Reduce interval by this much per star
   MIN_SPAWN_INTERVAL: 2, // Minimum time between spawns (at 5 stars - very aggressive)
@@ -77,8 +73,8 @@ export const WANTED_CONFIG = {
 
 export const WORLD_CONFIG = {
   SIZE: 200,
-  GROUND_COLOR: 0x5a7a4a,
-  ROAD_COLOR: 0x333333,
+  GROUND_COLOR: 0x7a7a7a, // Urban concrete
+  ROAD_COLOR: 0x2a2a2a, // Dark asphalt
   BUILDING_COUNT: 80, // Fill all green zones
   BUILDING_MIN_SIZE: { width: 8, height: 8, depth: 8 },
   BUILDING_MAX_SIZE: { width: 14, height: 25, depth: 14 },
@@ -130,8 +126,8 @@ export const COLORS = {
   ENEMY_CAR: 0x000000,
   POLICE_CABIN: 0x111111,
   OBSTACLE: 0xffaa33,
-  ROAD: 0x333333,
-  GRASS: 0x66bb66,
+  ROAD: 0x2a2a2a,
+  GRASS: 0x8a8a8a, // Urban concrete/pavement
   SKY: 0x87ceeb,
 };
 
@@ -141,9 +137,9 @@ export const ROAD_CONFIG = {
   SEGMENT_LENGTH: 90,
   SEGMENT_WIDTH: 18,
   LANE_WIDTH: 4,
-  ROAD_COLOR: COLORS.ROAD,
-  LANE_MARKER_COLOR: 0xffffff,
-  CENTER_LINE_COLOR: 0xffd23c,
+  ROAD_COLOR: 0x2a2a2a, // Dark asphalt
+  LANE_MARKER_COLOR: 0xeeeeee, // Slightly off-white for realism
+  CENTER_LINE_COLOR: 0xffdd44, // Slightly warmer yellow
   CENTER_LINE_WIDTH: 0.35,
   CENTER_LINE_LENGTH: 5,
   CENTER_LINE_SPACING: 8,

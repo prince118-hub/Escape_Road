@@ -32,63 +32,129 @@ export class City {
    * Initialize shared materials to prevent texture limit issues
    */
   _initSharedMaterials() {
-    // Create grass texture for green areas
-    const grassCanvas = document.createElement("canvas");
-    grassCanvas.width = 256;
-    grassCanvas.height = 256;
-    const grassCtx = grassCanvas.getContext("2d");
-    grassCtx.fillStyle = "#4a7a3a";
-    grassCtx.fillRect(0, 0, 256, 256);
-    // Add grass texture pattern
-    for (let i = 0; i < 5000; i++) {
-      grassCtx.fillStyle = `rgba(${60 + Math.random() * 40}, ${
-        90 + Math.random() * 40
-      }, ${40 + Math.random() * 20}, 0.3)`;
-      grassCtx.fillRect(
-        Math.random() * 256,
-        Math.random() * 256,
-        1,
-        Math.random() * 3
+    // Create enhanced urban pavement texture with sidewalk details
+    const concreteCanvas = document.createElement("canvas");
+    concreteCanvas.width = 512;
+    concreteCanvas.height = 512;
+    const concreteCtx = concreteCanvas.getContext("2d");
+
+    // Base concrete color - medium gray
+    concreteCtx.fillStyle = "#7a7a7a";
+    concreteCtx.fillRect(0, 0, 512, 512);
+
+    // Add paving stone grid pattern for urban plaza effect
+    concreteCtx.strokeStyle = "#656565";
+    concreteCtx.lineWidth = 2;
+    const gridSize = 64;
+    for (let x = 0; x < 512; x += gridSize) {
+      concreteCtx.beginPath();
+      concreteCtx.moveTo(x, 0);
+      concreteCtx.lineTo(x, 512);
+      concreteCtx.stroke();
+    }
+    for (let y = 0; y < 512; y += gridSize) {
+      concreteCtx.beginPath();
+      concreteCtx.moveTo(0, y);
+      concreteCtx.lineTo(512, y);
+      concreteCtx.stroke();
+    }
+
+    // Add concrete texture - cracks and variations
+    for (let i = 0; i < 1200; i++) {
+      const brightness = 100 + Math.random() * 60;
+      concreteCtx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness}, ${
+        0.1 + Math.random() * 0.2
+      })`;
+      concreteCtx.fillRect(
+        Math.random() * 512,
+        Math.random() * 512,
+        Math.random() * 4 + 1,
+        Math.random() * 4 + 1
       );
     }
-    const grassTexture = new THREE.CanvasTexture(grassCanvas);
-    grassTexture.wrapS = THREE.RepeatWrapping;
-    grassTexture.wrapT = THREE.RepeatWrapping;
-    grassTexture.repeat.set(20, 20);
 
-    // Create asphalt texture for roads
+    // Add some darker spots and weathering effects
+    for (let i = 0; i < 150; i++) {
+      const darkness = 40 + Math.random() * 40;
+      concreteCtx.fillStyle = `rgba(${darkness}, ${darkness}, ${darkness}, 0.15)`;
+      concreteCtx.fillRect(
+        Math.random() * 512,
+        Math.random() * 512,
+        Math.random() * 12 + 3,
+        Math.random() * 12 + 3
+      );
+    }
+
+    // Add subtle sidewalk edge lines (alternating pattern)
+    concreteCtx.strokeStyle = "#909090";
+    concreteCtx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      const y = i * 64 + 32;
+      concreteCtx.setLineDash([8, 8]);
+      concreteCtx.beginPath();
+      concreteCtx.moveTo(0, y);
+      concreteCtx.lineTo(512, y);
+      concreteCtx.stroke();
+    }
+    concreteCtx.setLineDash([]);
+
+    const concreteTexture = new THREE.CanvasTexture(concreteCanvas);
+    concreteTexture.wrapS = THREE.RepeatWrapping;
+    concreteTexture.wrapT = THREE.RepeatWrapping;
+    concreteTexture.repeat.set(15, 15);
+
+    // Create realistic asphalt texture for roads
     const asphaltCanvas = document.createElement("canvas");
     asphaltCanvas.width = 256;
     asphaltCanvas.height = 256;
     const asphaltCtx = asphaltCanvas.getContext("2d");
+    // Base dark asphalt color
     asphaltCtx.fillStyle = "#2a2a2a";
     asphaltCtx.fillRect(0, 0, 256, 256);
-    // Add asphalt grain
-    for (let i = 0; i < 3000; i++) {
-      const brightness = Math.random() * 30;
-      asphaltCtx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness}, 0.2)`;
-      asphaltCtx.fillRect(Math.random() * 256, Math.random() * 256, 1, 1);
+    // Add realistic asphalt grain and aggregate
+    for (let i = 0; i < 4000; i++) {
+      const brightness = Math.random() * 40;
+      asphaltCtx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness}, ${
+        0.15 + Math.random() * 0.25
+      })`;
+      asphaltCtx.fillRect(
+        Math.random() * 256,
+        Math.random() * 256,
+        Math.random() * 2,
+        Math.random() * 2
+      );
+    }
+    // Add some lighter patches (worn areas)
+    for (let i = 0; i < 50; i++) {
+      const lightness = 50 + Math.random() * 30;
+      asphaltCtx.fillStyle = `rgba(${lightness}, ${lightness}, ${lightness}, 0.1)`;
+      asphaltCtx.fillRect(
+        Math.random() * 256,
+        Math.random() * 256,
+        Math.random() * 10 + 5,
+        Math.random() * 10 + 5
+      );
     }
     const asphaltTexture = new THREE.CanvasTexture(asphaltCanvas);
     asphaltTexture.wrapS = THREE.RepeatWrapping;
     asphaltTexture.wrapT = THREE.RepeatWrapping;
     asphaltTexture.repeat.set(4, 4);
 
-    // Colorful building materials like in the reference image
+    // Modern urban building color palette - neutral and comfortable
     this.buildingColors = [
-      0x6eb5e0, // Light blue
-      0x4a9fd8, // Medium blue
-      0xd47c7c, // Red/pink
-      0xa85555, // Dark red
-      0x5ec9bc, // Cyan/teal
-      0x3eb0a0, // Dark teal
-      0xd4c89a, // Beige/tan
-      0xb8a878, // Dark beige
+      0xc0c0c0, // Light gray
+      0xa0a0a0, // Medium gray
+      0xe8e8e8, // Off-white
+      0x909090, // Darker gray
+      0xb0b8c0, // Cool gray-blue
+      0xa8b0b0, // Neutral gray-green
+      0xd0d0d0, // Very light gray
+      0x888888, // Charcoal gray
     ];
 
-    // Ground material with grass texture
+    // Ground material with concrete texture
     this.groundMaterial = new THREE.MeshLambertMaterial({
-      map: grassTexture,
+      map: concreteTexture,
     });
 
     // Road material with asphalt texture
@@ -96,11 +162,11 @@ export class City {
       map: asphaltTexture,
     });
 
-    // Stripe material for buildings
-    this.stripeMaterial = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+    // Stripe material for buildings - lighter for better contrast
+    this.stripeMaterial = new THREE.MeshLambertMaterial({ color: 0x606060 });
 
-    // Rooftop material
-    this.rooftopMaterial = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+    // Rooftop material - neutral gray for modern look
+    this.rooftopMaterial = new THREE.MeshLambertMaterial({ color: 0x707070 });
 
     // Create window textures for building facades
     this._createBuildingTextures();
@@ -113,23 +179,52 @@ export class City {
   _createBuildingTextures() {
     this.buildingTextures = {};
 
-    // Office building texture (grid of windows)
+    // Office building texture (grid of windows) - modern gray
     const officeCanvas = document.createElement("canvas");
     officeCanvas.width = 256;
     officeCanvas.height = 256;
     const officeCtx = officeCanvas.getContext("2d");
-    officeCtx.fillStyle = "#8b9a9e";
+    officeCtx.fillStyle = "#a8a8a8"; // Neutral gray
     officeCtx.fillRect(0, 0, 256, 256);
-    // Draw windows
+
+    // Add subtle vertical lines (building columns)
+    officeCtx.strokeStyle = "#989898";
+    officeCtx.lineWidth = 2;
+    for (let x = 0; x < 256; x += 64) {
+      officeCtx.beginPath();
+      officeCtx.moveTo(x, 0);
+      officeCtx.lineTo(x, 256);
+      officeCtx.stroke();
+    }
+
+    // Draw windows with subtle glass reflection
     const windowSize = 20;
     const spacing = 8;
     for (let x = 10; x < 256; x += windowSize + spacing) {
       for (let y = 10; y < 256; y += windowSize + spacing) {
-        officeCtx.fillStyle = "#ffeb3b";
+        // Glass window with gradient for depth
+        const gradient = officeCtx.createLinearGradient(
+          x,
+          y,
+          x + windowSize,
+          y + windowSize
+        );
+        gradient.addColorStop(0, "#c0d4e0");
+        gradient.addColorStop(1, "#a0b4c0");
+        officeCtx.fillStyle = gradient;
         officeCtx.fillRect(x, y, windowSize, windowSize);
-        officeCtx.strokeStyle = "#333";
+        // Window frame
+        officeCtx.strokeStyle = "#606060";
         officeCtx.lineWidth = 1;
         officeCtx.strokeRect(x, y, windowSize, windowSize);
+        // Window cross divider
+        officeCtx.strokeStyle = "#707070";
+        officeCtx.beginPath();
+        officeCtx.moveTo(x + windowSize / 2, y);
+        officeCtx.lineTo(x + windowSize / 2, y + windowSize);
+        officeCtx.moveTo(x, y + windowSize / 2);
+        officeCtx.lineTo(x + windowSize, y + windowSize / 2);
+        officeCtx.stroke();
       }
     }
     const officeTexture = new THREE.CanvasTexture(officeCanvas);
@@ -138,22 +233,44 @@ export class City {
       map: officeTexture,
     });
 
-    // Residential building texture (different window pattern)
+    // Residential building texture - modern apartment style
     const residentialCanvas = document.createElement("canvas");
     residentialCanvas.width = 256;
     residentialCanvas.height = 256;
     const resCtx = residentialCanvas.getContext("2d");
-    resCtx.fillStyle = "#c9a574";
+    resCtx.fillStyle = "#c8c8c8"; // Light gray
     resCtx.fillRect(0, 0, 256, 256);
-    // Draw windows
+
+    // Add horizontal floor lines
+    resCtx.strokeStyle = "#b0b0b0";
+    resCtx.lineWidth = 2;
+    for (let y = 0; y < 256; y += 28) {
+      resCtx.beginPath();
+      resCtx.moveTo(0, y);
+      resCtx.lineTo(256, y);
+      resCtx.stroke();
+    }
+
+    // Draw windows with balconies
     const windowSize2 = 18;
     const spacing2 = 10;
     for (let x = 15; x < 256; x += windowSize2 + spacing2) {
       for (let y = 15; y < 256; y += windowSize2 + spacing2) {
-        resCtx.fillStyle = "#87ceeb";
+        // Cool white indoor lighting (modern LED)
+        resCtx.fillStyle = "#f0f4f8";
         resCtx.fillRect(x, y, windowSize2, windowSize2);
-        resCtx.fillStyle = "#444";
+        resCtx.fillStyle = "#555";
         resCtx.fillRect(x + 4, y + 4, windowSize2 - 8, windowSize2 - 8);
+
+        // Add small balcony rail below every other window
+        if (Math.random() > 0.5) {
+          resCtx.strokeStyle = "#909090";
+          resCtx.lineWidth = 1;
+          resCtx.beginPath();
+          resCtx.moveTo(x, y + windowSize2 + 2);
+          resCtx.lineTo(x + windowSize2, y + windowSize2 + 2);
+          resCtx.stroke();
+        }
       }
     }
     const residentialTexture = new THREE.CanvasTexture(residentialCanvas);
@@ -162,23 +279,43 @@ export class City {
       map: residentialTexture,
     });
 
-    // Shop/Commercial texture (larger windows)
+    // Shop/Commercial texture - modern storefront
     const shopCanvas = document.createElement("canvas");
     shopCanvas.width = 256;
     shopCanvas.height = 256;
     const shopCtx = shopCanvas.getContext("2d");
-    shopCtx.fillStyle = "#d4464f";
+    shopCtx.fillStyle = "#b0b0b0"; // Neutral gray
     shopCtx.fillRect(0, 0, 256, 256);
-    // Draw shop windows
+
+    // Add decorative horizontal bands
+    shopCtx.fillStyle = "#9a9a9a";
+    shopCtx.fillRect(0, 80, 256, 4);
+    shopCtx.fillRect(0, 170, 256, 4);
+
+    // Draw shop windows (larger for storefronts)
     const windowSize3 = 35;
     const spacing3 = 15;
     for (let x = 10; x < 256; x += windowSize3 + spacing3) {
       for (let y = 10; y < 256; y += windowSize3 + spacing3) {
-        shopCtx.fillStyle = "#ffd700";
+        // Glass with gradient for depth
+        const gradient = shopCtx.createLinearGradient(
+          x,
+          y,
+          x + windowSize3,
+          y + windowSize3
+        );
+        gradient.addColorStop(0, "#f0f8ff");
+        gradient.addColorStop(1, "#d8e8f8");
+        shopCtx.fillStyle = gradient;
         shopCtx.fillRect(x, y, windowSize3, windowSize3);
-        shopCtx.strokeStyle = "#8b0000";
+        // Frame with depth
+        shopCtx.strokeStyle = "#505050";
         shopCtx.lineWidth = 2;
         shopCtx.strokeRect(x, y, windowSize3, windowSize3);
+        // Inner frame
+        shopCtx.strokeStyle = "#707070";
+        shopCtx.lineWidth = 1;
+        shopCtx.strokeRect(x + 3, y + 3, windowSize3 - 6, windowSize3 - 6);
       }
     }
     const shopTexture = new THREE.CanvasTexture(shopCanvas);
@@ -187,20 +324,21 @@ export class City {
       map: shopTexture,
     });
 
-    // Modern/Glass texture
+    // Modern/Glass texture - sleek glass facade
     const modernCanvas = document.createElement("canvas");
     modernCanvas.width = 256;
     modernCanvas.height = 256;
     const modCtx = modernCanvas.getContext("2d");
-    modCtx.fillStyle = "#4a5f6f";
+    modCtx.fillStyle = "#9098a0"; // Cool gray
     modCtx.fillRect(0, 0, 256, 256);
-    // Draw glass panels
+    // Draw glass panels with subtle reflection
     const panelSize = 32;
     for (let x = 0; x < 256; x += panelSize) {
       for (let y = 0; y < 256; y += panelSize) {
-        modCtx.fillStyle = "#87ceeb";
+        // Glass panel with blue-gray tint
+        modCtx.fillStyle = "#a8c0d0";
         modCtx.fillRect(x + 2, y + 2, panelSize - 4, panelSize - 4);
-        modCtx.strokeStyle = "#333";
+        modCtx.strokeStyle = "#505050";
         modCtx.lineWidth = 2;
         modCtx.strokeRect(x + 2, y + 2, panelSize - 4, panelSize - 4);
       }
@@ -209,6 +347,102 @@ export class City {
     modernTexture.magFilter = THREE.NearestFilter;
     this.buildingTextures.modern = new THREE.MeshLambertMaterial({
       map: modernTexture,
+    });
+
+    // Brick texture - detailed brick pattern
+    const brickCanvas = document.createElement("canvas");
+    brickCanvas.width = 256;
+    brickCanvas.height = 256;
+    const brickCtx = brickCanvas.getContext("2d");
+    brickCtx.fillStyle = "#9a8a7a"; // Warm brick gray
+    brickCtx.fillRect(0, 0, 256, 256);
+    // Draw brick pattern
+    const brickWidth = 32;
+    const brickHeight = 16;
+    for (let y = 0; y < 256; y += brickHeight) {
+      const offset = (Math.floor(y / brickHeight) % 2) * (brickWidth / 2);
+      for (let x = -brickWidth; x < 256; x += brickWidth) {
+        // Individual brick with slight color variation
+        const colorVar = Math.random() * 20 - 10;
+        brickCtx.fillStyle = `rgb(${154 + colorVar}, ${138 + colorVar}, ${
+          122 + colorVar
+        })`;
+        brickCtx.fillRect(x + offset, y, brickWidth - 2, brickHeight - 2);
+        // Mortar lines
+        brickCtx.strokeStyle = "#787878";
+        brickCtx.lineWidth = 2;
+        brickCtx.strokeRect(x + offset, y, brickWidth - 2, brickHeight - 2);
+      }
+    }
+    const brickTexture = new THREE.CanvasTexture(brickCanvas);
+    brickTexture.magFilter = THREE.NearestFilter;
+    this.buildingTextures.brick = new THREE.MeshLambertMaterial({
+      map: brickTexture,
+    });
+
+    // Metal panel texture - industrial modern
+    const metalCanvas = document.createElement("canvas");
+    metalCanvas.width = 256;
+    metalCanvas.height = 256;
+    const metalCtx = metalCanvas.getContext("2d");
+    metalCtx.fillStyle = "#858585"; // Metallic gray
+    metalCtx.fillRect(0, 0, 256, 256);
+    // Draw horizontal metal panels
+    const panelHeight = 32;
+    for (let y = 0; y < 256; y += panelHeight) {
+      // Panel with gradient effect
+      const gradient = metalCtx.createLinearGradient(0, y, 0, y + panelHeight);
+      gradient.addColorStop(0, "#909090");
+      gradient.addColorStop(0.5, "#858585");
+      gradient.addColorStop(1, "#707070");
+      metalCtx.fillStyle = gradient;
+      metalCtx.fillRect(0, y, 256, panelHeight - 2);
+      // Rivets
+      for (let x = 20; x < 256; x += 40) {
+        metalCtx.fillStyle = "#606060";
+        metalCtx.beginPath();
+        metalCtx.arc(x, y + panelHeight / 2, 2, 0, Math.PI * 2);
+        metalCtx.fill();
+      }
+    }
+    const metalTexture = new THREE.CanvasTexture(metalCanvas);
+    metalTexture.magFilter = THREE.NearestFilter;
+    this.buildingTextures.metal = new THREE.MeshLambertMaterial({
+      map: metalTexture,
+    });
+
+    // Concrete panel texture - brutalist style
+    const concretePanelCanvas = document.createElement("canvas");
+    concretePanelCanvas.width = 256;
+    concretePanelCanvas.height = 256;
+    const concretePanelCtx = concretePanelCanvas.getContext("2d");
+    concretePanelCtx.fillStyle = "#a0a0a0"; // Concrete gray
+    concretePanelCtx.fillRect(0, 0, 256, 256);
+    // Draw large concrete panels with seams
+    const concretePanel = 64;
+    for (let x = 0; x < 256; x += concretePanel) {
+      for (let y = 0; y < 256; y += concretePanel) {
+        // Add texture variation to each panel
+        for (let i = 0; i < 100; i++) {
+          const brightness = 130 + Math.random() * 60;
+          concretePanelCtx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness}, 0.2)`;
+          concretePanelCtx.fillRect(
+            x + Math.random() * concretePanel,
+            y + Math.random() * concretePanel,
+            2,
+            2
+          );
+        }
+        // Panel seams
+        concretePanelCtx.strokeStyle = "#707070";
+        concretePanelCtx.lineWidth = 3;
+        concretePanelCtx.strokeRect(x, y, concretePanel, concretePanel);
+      }
+    }
+    const concretePanelTexture = new THREE.CanvasTexture(concretePanelCanvas);
+    concretePanelTexture.magFilter = THREE.NearestFilter;
+    this.buildingTextures.concretePanel = new THREE.MeshLambertMaterial({
+      map: concretePanelTexture,
     });
   }
 
@@ -316,6 +550,25 @@ export class City {
       }
     });
 
+    // Remove props (streetlights, cars, benches, trees)
+    if (tile.props) {
+      tile.props.forEach((prop) => {
+        this.scene.remove(prop);
+        prop.traverse((child) => {
+          if (child.geometry && typeof child.geometry.dispose === "function") {
+            child.geometry.dispose();
+          }
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach((m) => m && m.dispose && m.dispose());
+            } else if (typeof child.material.dispose === "function") {
+              child.material.dispose();
+            }
+          }
+        });
+      });
+    }
+
     this.tiles.delete(key);
   }
 
@@ -332,11 +585,13 @@ export class City {
       ground: null,
       roads: [],
       buildings: [],
+      props: [], // Urban props (streetlights, cars, benches, trees)
     };
 
     tile.ground = this._createGround(origin);
     tile.roads = this._createRoadPatches(origin);
     tile.buildings = this._createBuildingsForTile(origin);
+    tile.props = this._createUrbanProps(origin, tile); // Add urban elements
     // Rivers removed
 
     return tile;
@@ -412,12 +667,12 @@ export class City {
     this.scene.add(vRoad);
     roads.push(vRoad);
 
-    // Median strip
+    // Median strip - concrete divider
     const vMedianGeo = new THREE.PlaneGeometry(medianWidth, 200);
     const vMedian = new THREE.Mesh(
       vMedianGeo,
       new THREE.MeshLambertMaterial({
-        color: 0xc8ff80,
+        color: 0x606060, // Concrete gray divider
         depthWrite: true,
       })
     );
@@ -439,12 +694,12 @@ export class City {
     this.scene.add(hRoad);
     roads.push(hRoad);
 
-    // Median strip for horizontal road
+    // Median strip for horizontal road - concrete divider
     const hMedianGeo = new THREE.PlaneGeometry(200, medianWidth);
     const hMedian = new THREE.Mesh(
       hMedianGeo,
       new THREE.MeshLambertMaterial({
-        color: 0xc8ff80,
+        color: 0x606060, // Concrete gray divider
         depthWrite: true,
       })
     );
@@ -507,8 +762,8 @@ export class City {
           const actualX = origin.x + x;
           const actualZ = origin.z + z;
 
-          // Randomize building type and size
-          const buildingType = randomInt(0, 3); // 0: office, 1: residential, 2: shop, 3: modern
+          // Randomize building type and size with more variety
+          const buildingType = randomInt(0, 6); // 0-6: office, residential, shop, modern, brick, metal, concrete
           const sizeVariation = randomInt(0, 2); // 0: small, 1: medium, 2: large
 
           let width, height, depth, building;
@@ -528,15 +783,21 @@ export class City {
           }
           depth = randomInt(8, 16);
 
-          // Create building based on type
+          // Create building based on type with more variety
           if (buildingType === 0) {
             building = this._createOfficeBuilding(width, height, depth);
           } else if (buildingType === 1) {
             building = this._createResidentialBuilding(width, height, depth);
           } else if (buildingType === 2) {
             building = this._createShopBuilding(width, height, depth);
-          } else {
+          } else if (buildingType === 3) {
             building = this._createModernBuilding(width, height, depth);
+          } else if (buildingType === 4) {
+            building = this._createBrickBuilding(width, height, depth);
+          } else if (buildingType === 5) {
+            building = this._createMetalBuilding(width, height, depth);
+          } else {
+            building = this._createConcretePanelBuilding(width, height, depth);
           }
 
           building.position.set(actualX, height / 2, actualZ);
@@ -739,7 +1000,7 @@ export class City {
       height * 0.35,
       depth * 0.05
     );
-    const windowMaterial = new THREE.MeshLambertMaterial({ color: 0xffeb3b });
+    const windowMaterial = new THREE.MeshLambertMaterial({ color: 0xd0e8f0 }); // Light blue-gray glass
     const window = new THREE.Mesh(windowGeometry, windowMaterial);
     window.position.set(0, height * 0.1, depth / 2 + 0.02);
     building.add(window);
@@ -887,6 +1148,84 @@ export class City {
   }
 
   /**
+   * Create brick texture building
+   * @private
+   */
+  _createBrickBuilding(width, height, depth) {
+    const building = new THREE.Group();
+
+    // Main building body with brick texture
+    const bodyGeometry = new THREE.BoxGeometry(width, height, depth);
+    const body = new THREE.Mesh(bodyGeometry, this.buildingTextures.brick);
+    building.add(body);
+
+    // Rooftop
+    const roofGeometry = new THREE.BoxGeometry(width + 0.5, 0.5, depth + 0.5);
+    const roof = new THREE.Mesh(roofGeometry, this.rooftopMaterial);
+    roof.position.y = height / 2 + 0.25;
+    building.add(roof);
+
+    building.geometry = { parameters: { width, height, depth } };
+    return building;
+  }
+
+  /**
+   * Create metal panel building (industrial)
+   * @private
+   */
+  _createMetalBuilding(width, height, depth) {
+    const building = new THREE.Group();
+
+    // Main building body with metal panels
+    const bodyGeometry = new THREE.BoxGeometry(width, height, depth);
+    const body = new THREE.Mesh(bodyGeometry, this.buildingTextures.metal);
+    building.add(body);
+
+    // Industrial rooftop with equipment
+    const roofGeometry = new THREE.BoxGeometry(width, 0.5, depth);
+    const roof = new THREE.Mesh(roofGeometry, this.rooftopMaterial);
+    roof.position.y = height / 2 + 0.25;
+    building.add(roof);
+
+    // Add industrial equipment on roof
+    const equipmentGeometry = new THREE.BoxGeometry(3, 1.5, 2);
+    const equipmentMaterial = new THREE.MeshLambertMaterial({
+      color: 0x505050,
+    });
+    const equipment = new THREE.Mesh(equipmentGeometry, equipmentMaterial);
+    equipment.position.set(0, height / 2 + 1, 0);
+    building.add(equipment);
+
+    building.geometry = { parameters: { width, height, depth } };
+    return building;
+  }
+
+  /**
+   * Create concrete panel building (brutalist)
+   * @private
+   */
+  _createConcretePanelBuilding(width, height, depth) {
+    const building = new THREE.Group();
+
+    // Main building body with concrete panels
+    const bodyGeometry = new THREE.BoxGeometry(width, height, depth);
+    const body = new THREE.Mesh(
+      bodyGeometry,
+      this.buildingTextures.concretePanel
+    );
+    building.add(body);
+
+    // Flat concrete rooftop
+    const roofGeometry = new THREE.BoxGeometry(width, 0.5, depth);
+    const roof = new THREE.Mesh(roofGeometry, this.rooftopMaterial);
+    roof.position.y = height / 2 + 0.25;
+    building.add(roof);
+
+    building.geometry = { parameters: { width, height, depth } };
+    return building;
+  }
+
+  /**
    * Get all buildings for collision detection
    */
   getBuildings() {
@@ -965,6 +1304,225 @@ export class City {
     tilesToRemove.forEach(({ gridX, gridZ }) => {
       this._removeTile(gridX, gridZ);
     });
+  }
+
+  /**
+   * Create urban props for a tile (streetlights at crossings only, benches, trees)
+   * @private
+   */
+  _createUrbanProps(origin, tile) {
+    const props = [];
+    const roadWidth = 16;
+    const roadBuffer = 5;
+
+    // Add streetlights ONLY at crossings (intersections)
+    props.push(...this._createStreetlights(origin, roadWidth));
+
+    // NO parked cars - removed for cleaner look
+
+    // Add urban furniture (benches, trees, signs)
+    props.push(...this._createUrbanFurniture(origin, roadWidth, roadBuffer));
+
+    return props;
+  }
+
+  /**
+   * Create streetlights ONLY at crossings (intersections)
+   * @private
+   */
+  _createStreetlights(origin, roadWidth) {
+    const lights = [];
+    const offset = roadWidth / 2 + 2;
+
+    // Only place lights at the intersection (center crossing)
+    // Four corners of the intersection
+    const cornerPositions = [
+      { x: origin.x - offset, z: origin.z - offset }, // Top-left
+      { x: origin.x + offset, z: origin.z - offset }, // Top-right
+      { x: origin.x - offset, z: origin.z + offset }, // Bottom-left
+      { x: origin.x + offset, z: origin.z + offset }, // Bottom-right
+    ];
+
+    cornerPositions.forEach((pos) => {
+      const light = this._createStreetlight(pos.x, pos.z);
+      lights.push(light);
+    });
+    return lights;
+  }
+
+  /**
+   * Create a single streetlight
+   * @private
+   */
+  _createStreetlight(x, z) {
+    const group = new THREE.Group();
+
+    // Pole
+    const poleGeometry = new THREE.CylinderGeometry(0.15, 0.2, 6, 8);
+    const poleMaterial = new THREE.MeshLambertMaterial({ color: 0x404040 });
+    const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+    pole.position.y = 3;
+    pole.castShadow = true;
+    group.add(pole);
+
+    // Light housing
+    const housingGeometry = new THREE.BoxGeometry(0.6, 0.4, 0.6);
+    const housingMaterial = new THREE.MeshLambertMaterial({ color: 0x303030 });
+    const housing = new THREE.Mesh(housingGeometry, housingMaterial);
+    housing.position.y = 6.2;
+    housing.castShadow = true;
+    group.add(housing);
+
+    // Light bulb (emissive)
+    const bulbGeometry = new THREE.BoxGeometry(0.5, 0.2, 0.5);
+    const bulbMaterial = new THREE.MeshLambertMaterial({
+      color: 0xfff8dc,
+      emissive: 0xfff8dc,
+      emissiveIntensity: 0.3,
+    });
+    const bulb = new THREE.Mesh(bulbGeometry, bulbMaterial);
+    bulb.position.y = 6;
+    group.add(bulb);
+
+    group.position.set(x, 0, z);
+    this.scene.add(group);
+    return group;
+  }
+
+  /**
+   * Create urban furniture (benches, trees, signs)
+   * @private
+   */
+  _createUrbanFurniture(origin, roadWidth, roadBuffer) {
+    const furniture = [];
+
+    // Add trees in building zones
+    const treePositions = [
+      // Top-left quadrant
+      { x: origin.x - 40, z: origin.z - 40 },
+      { x: origin.x - 60, z: origin.z - 60 },
+      { x: origin.x - 45, z: origin.z - 70 },
+      // Top-right quadrant
+      { x: origin.x + 40, z: origin.z - 40 },
+      { x: origin.x + 60, z: origin.z - 60 },
+      { x: origin.x + 45, z: origin.z - 70 },
+      // Bottom-left quadrant
+      { x: origin.x - 40, z: origin.z + 40 },
+      { x: origin.x - 60, z: origin.z + 60 },
+      { x: origin.x - 45, z: origin.z + 70 },
+      // Bottom-right quadrant
+      { x: origin.x + 40, z: origin.z + 40 },
+      { x: origin.x + 60, z: origin.z + 60 },
+      { x: origin.x + 45, z: origin.z + 70 },
+    ];
+
+    treePositions.forEach((pos) => {
+      if (Math.random() > 0.5) {
+        furniture.push(this._createTree(pos.x, pos.z));
+      }
+    });
+
+    // Add benches near streets
+    const benchPositions = [
+      { x: origin.x - roadWidth - 3, z: origin.z - 30, rotation: 0 },
+      { x: origin.x + roadWidth + 3, z: origin.z + 30, rotation: Math.PI },
+      { x: origin.x - 30, z: origin.z - roadWidth - 3, rotation: Math.PI / 2 },
+      { x: origin.x + 30, z: origin.z + roadWidth + 3, rotation: -Math.PI / 2 },
+    ];
+
+    benchPositions.forEach((pos) => {
+      if (Math.random() > 0.6) {
+        furniture.push(this._createBench(pos.x, pos.z, pos.rotation));
+      }
+    });
+
+    return furniture;
+  }
+
+  /**
+   * Create a tree
+   * @private
+   */
+  _createTree(x, z) {
+    const group = new THREE.Group();
+
+    // Trunk
+    const trunkGeometry = new THREE.CylinderGeometry(0.3, 0.4, 4, 8);
+    const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x4a3520 });
+    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+    trunk.position.y = 2;
+    trunk.castShadow = true;
+    group.add(trunk);
+
+    // Foliage (multiple spheres for fuller look)
+    const foliageMaterial = new THREE.MeshLambertMaterial({ color: 0x2d5016 });
+
+    const foliagePositions = [
+      [0, 4.5, 0, 1.8],
+      [0, 5.5, 0, 1.5],
+      [0.8, 4.8, 0, 1.2],
+      [-0.8, 4.8, 0, 1.2],
+      [0, 4.8, 0.8, 1.2],
+      [0, 4.8, -0.8, 1.2],
+    ];
+
+    foliagePositions.forEach(([fx, fy, fz, radius]) => {
+      const foliageGeometry = new THREE.SphereGeometry(radius, 8, 8);
+      const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+      foliage.position.set(fx, fy, fz);
+      foliage.castShadow = true;
+      group.add(foliage);
+    });
+
+    group.position.set(x, 0, z);
+    this.scene.add(group);
+    return group;
+  }
+
+  /**
+   * Create a bench
+   * @private
+   */
+  _createBench(x, z, rotation) {
+    const group = new THREE.Group();
+
+    // Bench seat
+    const seatGeometry = new THREE.BoxGeometry(2, 0.1, 0.6);
+    const woodMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
+    const seat = new THREE.Mesh(seatGeometry, woodMaterial);
+    seat.position.y = 0.4;
+    seat.castShadow = true;
+    group.add(seat);
+
+    // Bench back
+    const backGeometry = new THREE.BoxGeometry(2, 0.6, 0.1);
+    const back = new THREE.Mesh(backGeometry, woodMaterial);
+    back.position.set(0, 0.7, -0.25);
+    back.castShadow = true;
+    group.add(back);
+
+    // Legs (metal)
+    const legMaterial = new THREE.MeshLambertMaterial({ color: 0x505050 });
+    const legGeometry = new THREE.BoxGeometry(0.1, 0.4, 0.1);
+
+    const legPositions = [
+      [-0.8, 0.2, 0.2],
+      [0.8, 0.2, 0.2],
+      [-0.8, 0.2, -0.2],
+      [0.8, 0.2, -0.2],
+    ];
+
+    legPositions.forEach(([lx, ly, lz]) => {
+      const leg = new THREE.Mesh(legGeometry, legMaterial);
+      leg.position.set(lx, ly, lz);
+      leg.castShadow = true;
+      group.add(leg);
+    });
+
+    group.position.set(x, 0, z);
+    group.rotation.y = rotation;
+    this.scene.add(group);
+    return group;
   }
 
   /**

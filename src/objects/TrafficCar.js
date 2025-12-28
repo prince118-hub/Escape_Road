@@ -1,11 +1,12 @@
 /**
- * TrafficCar - AI-controlled civilian traffic
+ * TrafficCar - AI-controlled civilian traffic with 3D models
  * Responsibility: Create realistic traffic that follows roads
  * Adds life to the city environment
  */
 
 import * as THREE from "three";
 import { random, randomInt } from "../utils/helpers.js";
+import { modelLoader } from "../utils/modelLoader.js";
 
 export class TrafficCar {
   constructor(scene, startPosition, lane = 0) {
@@ -16,15 +17,18 @@ export class TrafficCar {
     this.rotation = 0;
     this.mesh = null;
     this.isActive = true;
+    this.modelLoaded = false;
     // Collision and reverse state
     this.isColliding = false;
     this.collisionReverseTimer = 0;
     this.collisionReverseDirection = { x: 0, z: 0 };
     this.originalSpeed = this.speed;
     this.originalDirection = { x: 0, z: 0 };
+    // Random color for variety
+    this.carColor = this._getRandomColor();
 
     this._setLaneDirection();
-    this._createMesh();
+    this._loadAndCreateMesh();
   }
 
   /**
@@ -54,33 +58,67 @@ export class TrafficCar {
   }
 
   /**
-   * Create traffic car mesh
+   * Get random car color
    * @private
    */
-  _createMesh() {
-    // Expanded color palette for more variety
+  _getRandomColor() {
     const carColors = [
-      0x3366cc, // Blue
-      0xff6600, // Orange
-      0x00cc66, // Green
-      0xffff00, // Yellow
-      0xcc33cc, // Purple
-      0x999999, // Gray
-      0xff3333, // Red
-      0x33ccff, // Cyan
-      0xffffff, // White
-      0x000000, // Black
-      0xff66cc, // Pink
-      0x66ff33, // Lime
+      0x3366cc, 0xff6600, 0x00cc66, 0xffff00, 0xcc33cc, 0x999999, 0xff3333,
+      0x33ccff, 0xffffff, 0x000000, 0xff66cc, 0x66ff33,
     ];
-    const color = carColors[randomInt(0, carColors.length - 1)];
+    return carColors[randomInt(0, carColors.length - 1)];
+  }
 
+  /**
+   * Load and create traffic car mesh with 3D model
+   * @private
+   */
+  async _loadAndCreateMesh() {
+    try {
+      const model = await modelLoader.loadModel(
+        "/model/random_car/randomcar1.glb"
+      );
+
+      const group = new THREE.Group();
+
+      // Add the loaded model
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          // Apply random color to car body (assuming it's the first mesh)
+          if (child.material) {
+            child.material = child.material.clone();
+            child.material.color.setHex(this.carColor);
+          }
+        }
+      });
+
+      // Scale and position the model
+      // Moderate scale for traffic cars
+      model.scale.set(1.0, 1.0, 1.0);
+      // Rotate model to match direction
+      model.rotation.y = Math.PI;
+      group.add(model);
+
+      group.position.set(this.position.x, 0.15, this.position.z);
+      group.rotation.y = this.rotation;
+      this.scene.add(group);
+      this.mesh = group;
+      this.modelLoaded = true;
+    } catch (error) {
+      console.error("Failed to load traffic car model:", error);
+      this._createFallbackMesh();
+    }
+  }
+
+  _createFallbackMesh() {
     const group = new THREE.Group();
 
     // Car body
     const bodyGeometry = new THREE.BoxGeometry(1.8, 1, 3.2);
     const bodyMaterial = new THREE.MeshLambertMaterial({
-      color: color,
+      color: this.carColor,
     });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
     body.position.y = 0.5;
@@ -98,52 +136,18 @@ export class TrafficCar {
     cabin.castShadow = true;
     group.add(cabin);
 
-    // Wheels
-    const wheelGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 16);
-    const wheelMaterial = new THREE.MeshLambertMaterial({
-      color: 0x111111,
-    });
-
-    const wheelPositions = [
-      [-1, 0.35, 1.2],
-      [1, 0.35, 1.2],
-      [-1, 0.35, -1.2],
-      [1, 0.35, -1.2],
-    ];
-
-    wheelPositions.forEach((pos) => {
-      const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(pos[0], pos[1], pos[2]);
-      wheel.castShadow = true;
-      group.add(wheel);
-    });
-
-    // Headlights
-    const lightGeometry = new THREE.BoxGeometry(0.3, 0.2, 0.1);
-    const lightMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffcc,
-    });
-
-    const light1 = new THREE.Mesh(lightGeometry, lightMaterial);
-    light1.position.set(-0.6, 0.5, 1.65);
-    group.add(light1);
-
-    const light2 = new THREE.Mesh(lightGeometry, lightMaterial);
-    light2.position.set(0.6, 0.5, 1.65);
-    group.add(light2);
-
     group.position.set(this.position.x, 0.5, this.position.z);
     group.rotation.y = this.rotation;
     this.scene.add(group);
     this.mesh = group;
+    this.modelLoaded = true;
   }
 
   /**
    * Update traffic car movement
    */
   update(deltaTime, cityRef = null) {
-    if (!this.isActive) return;
+    if (!this.isActive || !this.modelLoaded || !this.mesh) return;
 
     // Handle collision reverse behavior
     if (this.isColliding && this.collisionReverseTimer > 0) {
@@ -310,10 +314,8 @@ export class TrafficManager {
     this.scene = scene;
     this.cityRef = cityRef; // Reference to city for building collision
     this.trafficCars = [];
-    this.parkedCars = []; // Static parked cars
     this.spawnTimer = 0;
     this.spawnInterval = 2; // Spawn every 2 seconds for more traffic
-    this.hasSpawnedParkedCars = false; // Flag to spawn parked cars once
     this._firstUpdateLogged = false; // Flag for debug logging
   }
 
@@ -325,12 +327,6 @@ export class TrafficManager {
     if (!this._firstUpdateLogged) {
       console.log("🚕 TrafficManager.update() is being called");
       this._firstUpdateLogged = true;
-    }
-
-    // Spawn parked cars once at the beginning
-    if (!this.hasSpawnedParkedCars && this.cityRef) {
-      this._spawnParkedCars();
-      this.hasSpawnedParkedCars = true;
     }
 
     this.spawnTimer += deltaTime;
@@ -422,143 +418,10 @@ export class TrafficManager {
   }
 
   /**
-   * Spawn static parked cars near buildings
-   * @private
-   */
-  _spawnParkedCars() {
-    if (!this.cityRef) {
-      console.warn("⚠️ Cannot spawn parked cars: cityRef is null");
-      return;
-    }
-
-    const buildings = this.cityRef.getBuildings();
-    console.log(`🏗️ Spawning parked cars near ${buildings.length} buildings`);
-    const numParkedCars = 15; // Number of parked cars to spawn
-
-    for (let i = 0; i < numParkedCars; i++) {
-      // Pick a random building
-      const building = buildings[randomInt(0, buildings.length - 1)];
-      if (!building) continue;
-
-      // Calculate parking spot near the building
-      const buildingX = building.position.x;
-      const buildingZ = building.position.z;
-      const buildingWidth = building.geometry.parameters.width / 2;
-      const buildingDepth = building.geometry.parameters.depth / 2;
-
-      // Choose a random side (0=north, 1=south, 2=east, 3=west)
-      const side = randomInt(0, 3);
-      let parkingX, parkingZ, parkingRotation;
-
-      switch (side) {
-        case 0: // North side
-          parkingX =
-            buildingX + random(-buildingWidth * 0.7, buildingWidth * 0.7);
-          parkingZ = buildingZ - buildingDepth - 5;
-          parkingRotation = 0;
-          break;
-        case 1: // South side
-          parkingX =
-            buildingX + random(-buildingWidth * 0.7, buildingWidth * 0.7);
-          parkingZ = buildingZ + buildingDepth + 5;
-          parkingRotation = Math.PI;
-          break;
-        case 2: // East side
-          parkingX = buildingX + buildingWidth + 5;
-          parkingZ =
-            buildingZ + random(-buildingDepth * 0.7, buildingDepth * 0.7);
-          parkingRotation = -Math.PI / 2;
-          break;
-        case 3: // West side
-          parkingX = buildingX - buildingWidth - 5;
-          parkingZ =
-            buildingZ + random(-buildingDepth * 0.7, buildingDepth * 0.7);
-          parkingRotation = Math.PI / 2;
-          break;
-      }
-
-      // Create a static parked car
-      const parkedCar = this._createParkedCar(
-        parkingX,
-        parkingZ,
-        parkingRotation
-      );
-      this.parkedCars.push(parkedCar);
-    }
-    console.log(
-      `🅿️ ${this.parkedCars.length} parked cars spawned successfully`
-    );
-  }
-
-  /**
-   * Create a static parked car
-   * @private
-   */
-  _createParkedCar(x, z, rotation) {
-    const carColors = [
-      0x3366cc, 0xff6600, 0x00cc66, 0xffff00, 0xcc33cc, 0x999999, 0xff3333,
-      0x33ccff, 0xffffff, 0x000000, 0xff66cc, 0x66ff33,
-    ];
-    const color = carColors[randomInt(0, carColors.length - 1)];
-
-    const group = new THREE.Group();
-
-    // Car body
-    const bodyGeometry = new THREE.BoxGeometry(1.8, 1, 3.2);
-    const bodyMaterial = new THREE.MeshLambertMaterial({ color });
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.position.y = 0.5;
-    body.castShadow = true;
-    group.add(body);
-
-    // Car cabin
-    const cabinGeometry = new THREE.BoxGeometry(1.6, 0.7, 1.8);
-    const cabinMaterial = new THREE.MeshLambertMaterial({ color: 0x222222 });
-    const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
-    cabin.position.y = 1.2;
-    cabin.position.z = -0.3;
-    cabin.castShadow = true;
-    group.add(cabin);
-
-    // Wheels
-    const wheelGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 16);
-    const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x111111 });
-    const wheelPositions = [
-      [-1, 0.35, 1.2],
-      [1, 0.35, 1.2],
-      [-1, 0.35, -1.2],
-      [1, 0.35, -1.2],
-    ];
-    wheelPositions.forEach((pos) => {
-      const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(pos[0], pos[1], pos[2]);
-      wheel.castShadow = true;
-      group.add(wheel);
-    });
-
-    group.position.set(x, 0.5, z);
-    group.rotation.y = rotation;
-    this.scene.add(group);
-    return group;
-  }
-
-  /**
    * Cleanup all traffic
    */
   dispose() {
     this.trafficCars.forEach((car) => car.dispose());
     this.trafficCars = [];
-
-    // Cleanup parked cars
-    this.parkedCars.forEach((car) => {
-      this.scene.remove(car);
-      car.traverse((child) => {
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) child.material.dispose();
-      });
-    });
-    this.parkedCars = [];
-    this.hasSpawnedParkedCars = false;
   }
 }

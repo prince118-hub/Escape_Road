@@ -1,5 +1,5 @@
 /**
- * EnemyChaser - AI-controlled police vehicle with omnidirectional movement
+ * EnemyChaser - AI-controlled police vehicle with omnidirectional movement and 3D model
  * Responsibility: Chase player using free-roaming movement, support multiple instances
  * Tank-style movement for isometric city chase
  */
@@ -7,6 +7,7 @@
 import * as THREE from "three";
 import { ENEMY_CONFIG, COLORS } from "../utils/constants.js";
 import { lerp, clamp, distance2D } from "../utils/helpers.js";
+import { modelLoader } from "../utils/modelLoader.js";
 
 export class EnemyChaser {
   constructor(
@@ -34,9 +35,9 @@ export class EnemyChaser {
 
     // Three.js mesh
     this.mesh = null;
-    this.wheels = [];
     this.lights = [];
     this.lightBlinkTime = 0;
+    this.modelLoaded = false;
     // Behavior state
     this.pursuitOffset = {
       // Give each police a unique lateral offset relative to player's heading
@@ -44,18 +45,70 @@ export class EnemyChaser {
       z: (Math.random() - 0.5) * 4,
     };
     this.blockTimer = 0; // Active cutoff maneuver time
-    this.wanderPhase = Math.random() * Math.PI * 2;
-    this._createMesh();
+    this._loadAndCreateMesh();
   }
 
   /**
-   * Create police car with wheels and flashing lights
+   * Load and create police car with 3D model and flashing lights
    * @private
    */
-  _createMesh() {
+  async _loadAndCreateMesh() {
+    try {
+      const config = ENEMY_CONFIG;
+      const model = await modelLoader.loadModel(
+        "/model/police_car/policecar1.glb"
+      );
+
+      this.mesh = new THREE.Group();
+
+      // Add the loaded model
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      // Scale and position the model
+      // Use a smaller uniform scale so the police car matches road proportions
+      model.scale.set(0.035, 0.035, 0.035);
+      // Rotate model to face forward
+  
+      // Center the model so it sits properly on the road
+      model.position.set(0, 0.8, -0.1);
+      this.mesh.add(model);
+
+      // Add police lights on top
+      const lightGeometry = new THREE.BoxGeometry(0.25, 0.2, 0.25);
+
+      const redLight = new THREE.Mesh(
+        lightGeometry,
+        new THREE.MeshBasicMaterial({ color: 0xff0000 })
+      );
+      redLight.position.set(-0.4, ENEMY_CONFIG.HEIGHT * 0.9, -0.3);
+
+      const blueLight = new THREE.Mesh(
+        lightGeometry,
+        new THREE.MeshBasicMaterial({ color: 0x0000ff })
+      );
+      blueLight.position.set(0.4, ENEMY_CONFIG.HEIGHT * 0.9, -0.3);
+
+      this.lights = [redLight, blueLight];
+      this.mesh.add(redLight);
+      this.mesh.add(blueLight);
+
+      this.mesh.position.set(this.position.x, 0.2, this.position.z);
+      this.scene.add(this.mesh);
+      this.modelLoaded = true;
+    } catch (error) {
+      console.error("Failed to load police car model:", error);
+      this._createFallbackMesh();
+    }
+  }
+
+  _createFallbackMesh() {
     const config = ENEMY_CONFIG;
 
-    // Police car body (BLACK)
     const bodyGeometry = new THREE.BoxGeometry(
       config.WIDTH,
       config.HEIGHT,
@@ -67,7 +120,6 @@ export class EnemyChaser {
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
     body.castShadow = true;
 
-    // Police cabin (also black/dark gray)
     const cabinGeometry = new THREE.BoxGeometry(
       config.WIDTH * 0.8,
       config.HEIGHT * 0.6,
@@ -81,88 +133,30 @@ export class EnemyChaser {
     cabin.position.z = -0.3;
     cabin.castShadow = true;
 
-    // Police light bar on top (red and blue)
-    const lightBarGeometry = new THREE.BoxGeometry(
-      config.WIDTH * 0.6,
-      0.15,
-      0.4
-    );
-    const lightBarMaterial = new THREE.MeshLambertMaterial({
-      color: 0x222222,
-    });
-    const lightBar = new THREE.Mesh(lightBarGeometry, lightBarMaterial);
-    lightBar.position.y = config.HEIGHT * 1.35;
-    lightBar.position.z = -0.3;
-    lightBar.castShadow = true;
-
-    // Police lights (red and blue on top of light bar)
     const lightGeometry = new THREE.BoxGeometry(0.35, 0.25, 0.35);
-
     const redLight = new THREE.Mesh(
       lightGeometry,
-      new THREE.MeshBasicMaterial({
-        color: 0xff0000,
-      })
+      new THREE.MeshBasicMaterial({ color: 0xff0000 })
     );
     redLight.position.set(-0.4, config.HEIGHT * 1.5, -0.3);
 
     const blueLight = new THREE.Mesh(
       lightGeometry,
-      new THREE.MeshBasicMaterial({
-        color: 0x0000ff,
-      })
+      new THREE.MeshBasicMaterial({ color: 0x0000ff })
     );
     blueLight.position.set(0.4, config.HEIGHT * 1.5, -0.3);
 
     this.lights = [redLight, blueLight];
 
-    // Create wheels
-    this.wheels = this._createWheels();
-
-    // Create group
     this.mesh = new THREE.Group();
     this.mesh.add(body);
     this.mesh.add(cabin);
-    this.mesh.add(lightBar);
     this.mesh.add(redLight);
     this.mesh.add(blueLight);
-    this.wheels.forEach((wheel) => this.mesh.add(wheel));
 
-    // Position enemy with base at ground level (y = height/2)
     this.mesh.position.set(this.position.x, config.HEIGHT / 2, this.position.z);
     this.scene.add(this.mesh);
-  }
-
-  /**
-   * Create animated wheels
-   * @private
-   */
-  _createWheels() {
-    const config = ENEMY_CONFIG;
-    const wheels = [];
-    const wheelGeometry = new THREE.CylinderGeometry(
-      config.WHEEL_RADIUS,
-      config.WHEEL_RADIUS,
-      config.WHEEL_WIDTH,
-      16
-    );
-    const wheelMaterial = new THREE.MeshLambertMaterial({
-      color: 0x1a1a1a,
-    });
-    const wheelPositions = [
-      [-config.WIDTH / 2 - 0.2, -config.HEIGHT / 3, config.LENGTH / 3],
-      [config.WIDTH / 2 + 0.2, -config.HEIGHT / 3, config.LENGTH / 3],
-      [-config.WIDTH / 2 - 0.2, -config.HEIGHT / 3, -config.LENGTH / 3],
-      [config.WIDTH / 2 + 0.2, -config.HEIGHT / 3, -config.LENGTH / 3],
-    ];
-    wheelPositions.forEach((pos) => {
-      const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(pos[0], pos[1], pos[2]);
-      wheel.castShadow = true;
-      wheels.push(wheel);
-    });
-    return wheels;
+    this.modelLoaded = true;
   }
 
   /**
@@ -170,6 +164,8 @@ export class EnemyChaser {
    * @param {number} deltaTime - Time since last frame in seconds
    */
   update(deltaTime) {
+    if (!this.modelLoaded || !this.mesh) return;
+
     if (this.blockTimer > 0) this.blockTimer -= deltaTime;
     const playerPos = this.playerRef.getPosition();
 
@@ -186,9 +182,6 @@ export class EnemyChaser {
 
     // Update position
     this._updatePosition(deltaTime);
-
-    // Animate wheels
-    this._animateWheels(deltaTime);
 
     // Flash lights
     this._updateLights(deltaTime);
@@ -394,16 +387,6 @@ export class EnemyChaser {
   }
 
   /**
-   * Animate wheels based on speed
-   * @private
-   */
-  _animateWheels(deltaTime) {
-    const wheelRotationSpeed = this.speed * deltaTime * 2;
-    this.wheels.forEach((wheel) => {
-      wheel.rotation.x += wheelRotationSpeed;
-    });
-  }
-
   /**
    * Flash police lights
    * @private
@@ -426,9 +409,12 @@ export class EnemyChaser {
    * @private
    */
   _updateMesh() {
-    this.mesh.position.x = this.position.x;
-    this.mesh.position.z = this.position.z;
-    this.mesh.rotation.y = this.rotation;
+    if (this.mesh) {
+      this.mesh.position.set(this.position.x, 0.2, this.position.z);
+      // The loaded model is rotated by Math.PI to face forward,
+      // so the group rotation should match `this.rotation` directly.
+      this.mesh.rotation.y = this.rotation;
+    }
   }
 
   /**

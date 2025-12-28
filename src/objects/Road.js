@@ -26,13 +26,13 @@ export class Road {
   }
 
   /**
-   * Create the ground plane (grass)
+   * Create the ground plane (urban pavement)
    * @private
    */
   _createGround() {
     const groundGeometry = new THREE.PlaneGeometry(200, 500);
     const groundMaterial = new THREE.MeshLambertMaterial({
-      color: COLORS.GRASS,
+      color: COLORS.GRASS, // Now set to urban concrete color
     });
 
     this.ground = new THREE.Mesh(groundGeometry, groundMaterial);

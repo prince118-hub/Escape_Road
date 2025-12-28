@@ -1,7 +1,8 @@
-﻿// New PlayerCar with omnidirectional movement will be created
+﻿// New PlayerCar with omnidirectional movement and 3D model
 import * as THREE from "three";
 import { PLAYER_CONFIG, COLORS } from "../utils/constants.js";
 import { clamp } from "../utils/helpers.js";
+import { modelLoader } from "../utils/modelLoader.js";
 
 export class PlayerCar {
   constructor(scene) {
@@ -25,7 +26,7 @@ export class PlayerCar {
     };
     this.distanceTraveled = 0;
     this.mesh = null;
-    this.wheels = [];
+    this.modelLoaded = false;
     this.isFalling = false;
     this.fallSpeed = 0;
     // Building collision crash state (physics-based crash system)
@@ -36,10 +37,50 @@ export class PlayerCar {
     // Caught by police state
     this.isCaught = false;
     this.caughtTimer = 0;
-    this._createMesh();
+    this._loadAndCreateMesh();
   }
 
-  _createMesh() {
+  async _loadAndCreateMesh() {
+    try {
+      // Load the 3D model
+      const model = await modelLoader.loadModel(
+        "/model/player_car/playercar1.glb"
+      );
+
+      this.mesh = new THREE.Group();
+
+      // Add the loaded model to the group
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      // Scale and position the model appropriately
+      // Increased scale for better visibility and proportions
+      model.scale.set(2.3, 2.3, 2.3);
+      // Rotate model to face forward (negative Z direction)
+      // Most GLB models face +Z by default, so rotate 180 degrees
+      model.rotation.y = Math.PI;
+
+      this.mesh.add(model);
+
+      // Position car with base at ground level
+      const config = PLAYER_CONFIG;
+      this.mesh.position.set(this.position.x, 0.2, this.position.z);
+      this.mesh.rotation.y = this.rotation;
+
+      this.scene.add(this.mesh);
+      this.modelLoaded = true;
+    } catch (error) {
+      console.error("Failed to load player car model:", error);
+      // Fallback to simple geometry
+      this._createFallbackMesh();
+    }
+  }
+
+  _createFallbackMesh() {
     const config = PLAYER_CONFIG;
     const bodyGeometry = new THREE.BoxGeometry(
       config.WIDTH,
@@ -50,7 +91,7 @@ export class PlayerCar {
       color: COLORS.PLAYER_CAR,
     });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.castShadow = false;
+    body.castShadow = true;
 
     const cabinGeometry = new THREE.BoxGeometry(
       config.WIDTH * 0.8,
@@ -63,48 +104,24 @@ export class PlayerCar {
     const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
     cabin.position.y = config.HEIGHT * 0.7;
     cabin.position.z = -0.2;
-    cabin.castShadow = false;
+    cabin.castShadow = true;
 
-    this.wheels = this._createWheels();
     this.mesh = new THREE.Group();
     this.mesh.add(body);
     this.mesh.add(cabin);
-    this.wheels.forEach((wheel) => this.mesh.add(wheel));
-    // Position car with base at ground level (y = height/2)
-    this.mesh.position.set(this.position.x, config.HEIGHT / 2, this.position.z);
-    this.scene.add(this.mesh);
-  }
 
-  _createWheels() {
-    const config = PLAYER_CONFIG;
-    const wheels = [];
-    const wheelGeometry = new THREE.CylinderGeometry(
-      config.WHEEL_RADIUS,
-      config.WHEEL_RADIUS,
-      config.WHEEL_WIDTH,
-      16
+    const config2 = PLAYER_CONFIG;
+    this.mesh.position.set(
+      this.position.x,
+      config2.HEIGHT / 2,
+      this.position.z
     );
-    const wheelMaterial = new THREE.MeshLambertMaterial({
-      color: 0x1a1a1a,
-    });
-    const wheelPositions = [
-      [-config.WIDTH / 2 - 0.2, -config.HEIGHT / 3, config.LENGTH / 3],
-      [config.WIDTH / 2 + 0.2, -config.HEIGHT / 3, config.LENGTH / 3],
-      [-config.WIDTH / 2 - 0.2, -config.HEIGHT / 3, -config.LENGTH / 3],
-      [config.WIDTH / 2 + 0.2, -config.HEIGHT / 3, -config.LENGTH / 3],
-    ];
-    wheelPositions.forEach((pos) => {
-      const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(pos[0], pos[1], pos[2]);
-      wheel.castShadow = true;
-      wheels.push(wheel);
-    });
-    return wheels;
+    this.scene.add(this.mesh);
+    this.modelLoaded = true;
   }
 
   update(deltaTime) {
-    if (!this.isAlive) return;
+    if (!this.isAlive || !this.modelLoaded || !this.mesh) return;
 
     // Handle caught state countdown
     if (this.isCaught) {
@@ -169,7 +186,6 @@ export class PlayerCar {
           this.crashReverseDirection = { x: 0, z: 0 };
         }
 
-        this._animateWheels(deltaTime);
         this._updateMesh();
         return;
       }
@@ -178,7 +194,6 @@ export class PlayerCar {
     this._updateBoost(deltaTime);
     this._applyInput(deltaTime);
     this._updatePosition(deltaTime);
-    this._animateWheels(deltaTime);
     this._updateMesh();
     const distDelta =
       Math.sqrt(
@@ -250,22 +265,12 @@ export class PlayerCar {
     if (Math.abs(this.velocity.z) < 0.01) this.velocity.z = 0;
   }
 
-  _animateWheels(deltaTime) {
-    const wheelRotationSpeed = this.speed * deltaTime * 2;
-    this.wheels.forEach((wheel, index) => {
-      if (index < 2) {
-        if (this.input.left) wheel.rotation.y = 0.3;
-        else if (this.input.right) wheel.rotation.y = -0.3;
-        else wheel.rotation.y = 0;
-      }
-      wheel.rotation.x += wheelRotationSpeed;
-    });
-  }
-
   _updateMesh() {
-    this.mesh.position.x = this.position.x;
-    this.mesh.position.z = this.position.z;
-    this.mesh.rotation.y = this.rotation;
+    if (this.mesh) {
+      this.mesh.position.set(this.position.x, 0.2, this.position.z);
+      // Rotate the visible model 180 degrees (Math.PI) so it faces correctly
+      this.mesh.rotation.y = this.rotation + Math.PI;
+    }
   }
 
   _updateBoost(deltaTime) {
