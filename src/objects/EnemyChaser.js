@@ -236,7 +236,7 @@ export class EnemyChaser {
     // Each police has a unique interceptor strategy:
     // Some try to get ahead, some try to flank
     const strategyVariant = (this.pursuitOffset.x + 10) / 20; // 0 to 1
-    
+
     let target = { ...intercept };
 
     if (strategyVariant < 0.33) {
@@ -315,15 +315,15 @@ export class EnemyChaser {
     } else {
       // Mid-range - match player speed and be slightly faster
       const playerSpeed = this.playerRef.getSpeed();
-      this.speed = lerp(this.speed, Math.max(playerSpeed + 5, config.INITIAL_SPEED * 1.2), 0.04);
+      this.speed = lerp(
+        this.speed,
+        Math.max(playerSpeed + 5, config.INITIAL_SPEED * 1.2),
+        0.04
+      );
     }
 
     // Clamp speed
-    this.speed = clamp(
-      this.speed,
-      config.INITIAL_SPEED,
-      config.MAX_SPEED
-    );
+    this.speed = clamp(this.speed, config.INITIAL_SPEED, config.MAX_SPEED);
   }
 
   /**
