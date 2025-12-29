@@ -183,8 +183,6 @@ The project follows a modular architecture with clear separation of concerns:
 - **Controls**: InputManager for keyboard input, CameraController for camera following
 - **UI**: HUD for in-game display, MenuSystem for menus
 
-For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
-
 ## Authors
 
 - **Jay Anit** – Project Leader, Physics & AI  
