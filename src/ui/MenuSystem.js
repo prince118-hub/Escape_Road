@@ -121,7 +121,7 @@ export class MenuSystem {
         text-shadow: 4px 4px 8px rgba(0,0,0,0.8);
         font-weight: bold;
       `,
-      "🚗 CHASE ESCAPE"
+      "🚗CHASE ESCAPE"
     );
     this.mainMenu.appendChild(title);
 

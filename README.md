@@ -21,7 +21,7 @@ Escape Road is an endless runner-style survival game with the following core mec
 
 ## Storyline
 
-You're a street racer who caught the attention of law enforcement during an illegal midnight run through the city. What started as a routine police encounter has escalated into an all-out chase. With sirens wailing behind you and the wanted level rising by the minute, your only objective is survival.
+You're a street racer who caught the attention of law enforcement during an illegal run through the city. What started as a routine police encounter has escalated into an all-out chase. With sirens wailing behind you and the wanted level rising by the minute, your only objective is survival.
 
 **Your Role**: An anonymous driver behind the wheel of a high-performance vehicle, desperately trying to evade capture.
 
@@ -54,7 +54,7 @@ Before running the project, ensure you have the following installed:
 1. **Clone or Download the Repository**
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/prince118-hub/Escape_Road.git
    cd Escape_Road
    ```
 
@@ -162,7 +162,7 @@ Escape_Road/
 │   └── utils/              # Constants and helper functions
 ├── public/
 │   └── model/              # 3D models (GLTF/GLB files)
-└── assets/                 # Additional game assets
+└── background_music/       # Background_music
 ```
 
 ## Technologies Used
@@ -187,9 +187,13 @@ For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Authors
 
+- **Jay Anit** – Lead Programmer, Gameplay Systems  
+- **Kent Harvey Savedra** – 3D Assets & Visual Effects, UI/UX  
+- **Prince Charles Aniñon** – Project Manager, Physics & AI
+
 **ITE18 Project Team**
 
-This project was developed as part of an academic assignment. All team members contributed to the design, development, and testing of the game.
+This project was developed as part of a course project. All team members contributed to the design, development, and testing of the game.
 
 ---
 
