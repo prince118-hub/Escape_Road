@@ -8,6 +8,7 @@ import * as THREE from "three";
 import { WORLD_CONFIG, COLORS, ROAD_CONFIG } from "../utils/constants.js";
 import { random, randomInt } from "../utils/helpers.js";
 import { CityObstacles } from "./CityObstacles.js";
+import { StreetFurniture } from "./StreetFurniture.js";
 
 export class City {
   constructor(scene) {
@@ -16,14 +17,15 @@ export class City {
     this.tiles = new Map(); // Use Map for efficient tile lookup by grid coordinates
     this.tileSize = WORLD_CONFIG.SIZE;
     this.cityObstacles = new CityObstacles(scene);
-    this.visibleRadius = 3; // Number of tiles to keep visible around player (3x3 = 9 tiles)
+    this.streetFurniture = new StreetFurniture(scene);
+    this.visibleRadius = 2; // Reduced from 3 - fewer tiles loaded (2x2 = 4 tiles)
     this.lastPlayerGrid = { x: 0, z: 0 }; // Track last player grid position
 
     // Async loading system for smooth performance
     this.loadQueue = []; // Tiles waiting to load
     this.loadingTiles = new Set(); // Currently loading tiles
-    this.maxLoadTimePerFrame = 6; // Max ms per frame (targeting 144fps)
-    this.buildingsPerChunk = 3; // Buildings per async chunk
+    this.maxLoadTimePerFrame = 4; // Reduced from 6 - less work per frame
+    this.buildingsPerChunk = 2; // Reduced from 3 - smaller chunks
 
     // Shared materials (reused across all objects to reduce texture/material count)
     this._initSharedMaterials();
@@ -564,6 +566,9 @@ export class City {
       } else {
         // Buildings complete, add props
         tile.props = this._createUrbanProps(tile.origin, tile);
+
+        // Add street furniture to ALL tiles so it's visible
+        this._addMinimalStreetFurniture(tile.origin);
       }
     };
 
@@ -607,7 +612,7 @@ export class City {
       },
     ];
 
-    const spacing = 25;
+    const spacing = 35; // Increased from 25 - fewer buildings
 
     buildingZones.forEach((zone) => {
       for (let x = zone.xMin + spacing / 2; x < zone.xMax; x += spacing) {
@@ -771,6 +776,9 @@ export class City {
     tile.buildings = this._createBuildingsForTile(origin);
     tile.props = this._createUrbanProps(origin, tile); // Add urban elements
     // Rivers removed
+
+    // Add street furniture to ALL tiles so it's visible
+    this._addMinimalStreetFurniture(origin);
 
     return tile;
   }
@@ -1493,6 +1501,11 @@ export class City {
     if (tilesToRemove.length > 0) {
       this._asyncCleanup(tilesToRemove);
     }
+
+    // Cleanup distant street furniture (only every ~50 frames for performance)
+    if (Math.random() > 0.98) {
+      this.streetFurniture.cleanup(playerPosition.x, playerPosition.z, 300);
+    }
   }
 
   /**
@@ -1545,13 +1558,16 @@ export class City {
     const roadWidth = 16;
     const roadBuffer = 5;
 
-    // Add streetlights ONLY at crossings (intersections)
-    props.push(...this._createStreetlights(origin, roadWidth));
+    // Reduced props - only add occasionally for performance
+    if (Math.random() > 0.7) {
+      // Only 30% of tiles get lights
+      props.push(...this._createStreetlights(origin, roadWidth));
+    }
 
-    // NO parked cars - removed for cleaner look
-
-    // Add urban furniture (benches, trees, signs)
-    props.push(...this._createUrbanFurniture(origin, roadWidth, roadBuffer));
+    // Minimal furniture - only 20% of tiles
+    if (Math.random() > 0.8) {
+      props.push(...this._createUrbanFurniture(origin, roadWidth, roadBuffer));
+    }
 
     return props;
   }
@@ -1564,12 +1580,9 @@ export class City {
     const lights = [];
     const offset = roadWidth / 2 + 2;
 
-    // Only place lights at the intersection (center crossing)
-    // Four corners of the intersection
+    // Only 2 lights per intersection instead of 4
     const cornerPositions = [
       { x: origin.x - offset, z: origin.z - offset }, // Top-left
-      { x: origin.x + offset, z: origin.z - offset }, // Top-right
-      { x: origin.x - offset, z: origin.z + offset }, // Bottom-left
       { x: origin.x + offset, z: origin.z + offset }, // Bottom-right
     ];
 
@@ -1587,31 +1600,25 @@ export class City {
   _createStreetlight(x, z) {
     const group = new THREE.Group();
 
-    // Pole
-    const poleGeometry = new THREE.CylinderGeometry(0.15, 0.2, 6, 8);
+    // Simplified pole with fewer segments
+    const poleGeometry = new THREE.CylinderGeometry(0.12, 0.15, 5, 6); // Reduced from 8 to 6 segments
     const poleMaterial = new THREE.MeshLambertMaterial({ color: 0x404040 });
     const pole = new THREE.Mesh(poleGeometry, poleMaterial);
-    pole.position.y = 3;
-    pole.castShadow = true;
+    pole.position.y = 2.5;
     group.add(pole);
 
-    // Light housing
-    const housingGeometry = new THREE.BoxGeometry(0.6, 0.4, 0.6);
+    // Simplified light housing
+    const housingGeometry = new THREE.BoxGeometry(0.5, 0.3, 0.5);
     const housingMaterial = new THREE.MeshLambertMaterial({ color: 0x303030 });
     const housing = new THREE.Mesh(housingGeometry, housingMaterial);
-    housing.position.y = 6.2;
-    housing.castShadow = true;
+    housing.position.y = 5.2;
     group.add(housing);
 
-    // Light bulb (emissive)
-    const bulbGeometry = new THREE.BoxGeometry(0.5, 0.2, 0.5);
-    const bulbMaterial = new THREE.MeshLambertMaterial({
-      color: 0xfff8dc,
-      emissive: 0xfff8dc,
-      emissiveIntensity: 0.3,
-    });
+    // Light bulb (emissive) - no point light for performance
+    const bulbGeometry = new THREE.BoxGeometry(0.4, 0.15, 0.4);
+    const bulbMaterial = new THREE.MeshBasicMaterial({ color: 0xffffdd }); // Basic material, no emissive
     const bulb = new THREE.Mesh(bulbGeometry, bulbMaterial);
-    bulb.position.y = 6;
+    bulb.position.y = 5;
     group.add(bulb);
 
     group.position.set(x, 0, z);
@@ -1756,6 +1763,80 @@ export class City {
   }
 
   /**
+   * Add minimal street furniture to intersection (very sparse)
+   * @private
+   */
+  _addMinimalStreetFurniture(origin) {
+    const roadWidth = ROAD_CONFIG.SEGMENT_WIDTH;
+    const offset = roadWidth / 2 + 2.5;
+    
+    // Always add street lights
+    this.streetFurniture.createIntersectionLights(
+      origin.x,
+      origin.z,
+      roadWidth
+    );
+
+    // Add realistic traffic lights at intersection
+    this.streetFurniture.createIntersectionTrafficLights(
+      origin.x,
+      origin.z,
+      roadWidth
+    );
+
+    // Add ALL 4 crosswalks (complete intersection coverage)
+    // North crosswalk
+    this.streetFurniture.createCrosswalk(
+      origin.x,
+      origin.z - offset,
+      roadWidth,
+      true
+    );
+    
+    // South crosswalk
+    this.streetFurniture.createCrosswalk(
+      origin.x,
+      origin.z + offset,
+      roadWidth,
+      true
+    );
+    
+    // East crosswalk
+    this.streetFurniture.createCrosswalk(
+      origin.x + offset,
+      origin.z,
+      roadWidth,
+      false
+    );
+    
+    // West crosswalk
+    this.streetFurniture.createCrosswalk(
+      origin.x - offset,
+      origin.z,
+      roadWidth,
+      false
+    );
+
+    // More visible signs (70% chance)
+    if (Math.random() > 0.3) {
+      const signOffset = roadWidth / 2 + 1.2;
+      this.streetFurniture.createTrafficSign(
+        origin.x + signOffset,
+        origin.z - signOffset - 4,
+        "stop"
+      );
+    }
+    
+    // Add bus stops occasionally
+    if (Math.random() > 0.6) {
+      this.streetFurniture.createBusStop(
+        origin.x + roadWidth / 2 + 3,
+        origin.z + 10
+      );
+    }
+  }
+
+  /**
    * Cleanup resources
    */
   dispose() {
@@ -1789,6 +1870,11 @@ export class City {
     // Cleanup city obstacles
     if (this.cityObstacles) {
       this.cityObstacles.dispose();
+    }
+
+    // Cleanup street furniture
+    if (this.streetFurniture) {
+      this.streetFurniture.dispose();
     }
 
     // Clear the tiles Map

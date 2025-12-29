@@ -6,6 +6,7 @@
 
 import * as THREE from "three";
 import { ROAD_CONFIG, COLORS } from "../utils/constants.js";
+import { StreetFurniture } from "./StreetFurniture.js";
 
 export class Road {
   constructor(scene) {
@@ -20,6 +21,9 @@ export class Road {
 
     // Track player position for segment recycling
     this.playerZ = 0;
+
+    // Street furniture helper (for adding sidewalks/lines to segments)
+    this.streetFurniture = new StreetFurniture(scene);
 
     this._createGround();
     this._initializeSegments();
@@ -85,6 +89,12 @@ export class Road {
     // Lane markers
     this._addLaneMarkers(segment);
 
+    // Add sidewalks and curbs (integrated into segment)
+    this.streetFurniture.addSidewalk(segment, config.SEGMENT_WIDTH, config.SEGMENT_LENGTH);
+
+    // Add edge lines
+    this.streetFurniture.addRoadEdgeLines(segment, config.SEGMENT_WIDTH, config.SEGMENT_LENGTH);
+
     return segment;
   }
 
@@ -96,7 +106,7 @@ export class Road {
     const config = ROAD_CONFIG;
     const markerWidth = 0.3;
     const markerLength = 3;
-    const markerSpacing = 8;
+    const markerSpacing = 12; // Increased from 8 - fewer markers
     const numMarkers = Math.floor(config.SEGMENT_LENGTH / markerSpacing);
 
     const markerGeometry = new THREE.PlaneGeometry(markerWidth, markerLength);
@@ -128,7 +138,7 @@ export class Road {
     const centerMaterial = new THREE.MeshBasicMaterial({
       color: config.CENTER_LINE_COLOR,
     });
-    const centerSpacing = config.CENTER_LINE_SPACING;
+    const centerSpacing = 12; // Increased from 8
     const centerCount = Math.floor(config.SEGMENT_LENGTH / centerSpacing);
 
     for (let i = 0; i < centerCount; i++) {
@@ -218,6 +228,11 @@ export class Road {
       this.scene.remove(this.ground);
       this.ground.geometry.dispose();
       this.ground.material.dispose();
+    }
+
+    // Dispose street furniture
+    if (this.streetFurniture) {
+      this.streetFurniture.dispose();
     }
   }
 }

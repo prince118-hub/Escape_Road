@@ -9,7 +9,7 @@ export const GAME_CONFIG = {
   CANVAS_HEIGHT: window.innerHeight,
   FOV: 75,
   NEAR_PLANE: 0.1,
-  FAR_PLANE: 1000,
+  FAR_PLANE: 500, // Reduced from 1000 for better performance
 
   // Camera (Isometric view)
   CAMERA_OFFSET: { x: 0, y: 40, z: 40 },
@@ -50,9 +50,9 @@ export const ENEMY_CONFIG = {
   MAX_DISTANCE: 50,
   ROTATION_SPEED: 0.06,
   AGGRESSION_FACTOR: 0.03,
-  INITIAL_COUNT: 3,
-  MAX_COUNT: 8,
-  SPAWN_INTERVAL: 20000,
+  INITIAL_COUNT: 2, // Reduced from 3
+  MAX_COUNT: 5, // Reduced from 8
+  SPAWN_INTERVAL: 25000, // Increased from 20000 - slower spawning
   SPEED_INCREASE_RATE: 0.001,
   MAX_SPEED: 32, // Slightly faster than player's normal speed (28) but slower than boost
   WIDTH: 2.2,
@@ -64,11 +64,11 @@ export const ENEMY_CONFIG = {
 export const WANTED_CONFIG = {
   MAX_WANTED_LEVEL: 5, // Maximum 5 stars
   WANTED_THRESHOLDS: [0, 20, 40, 70, 100], // Time in seconds to reach each star (faster progression)
-  BASE_POLICE_COUNT: 5, // Initial police count at 1 star
-  POLICE_PER_STAR: 5, // Additional 3 police for each star level (more aggressive)
-  BASE_SPAWN_INTERVAL: 8, // Base time (seconds) between police spawns (faster)
-  SPAWN_INTERVAL_REDUCTION: 1.5, // Reduce interval by this much per star
-  MIN_SPAWN_INTERVAL: 2, // Minimum time between spawns (at 5 stars - very aggressive)
+  BASE_POLICE_COUNT: 3, // Reduced from 5
+  POLICE_PER_STAR: 2, // Reduced from 5 - much less aggressive
+  BASE_SPAWN_INTERVAL: 10, // Increased from 8 - slower spawning
+  SPAWN_INTERVAL_REDUCTION: 1.2, // Reduced from 1.5
+  MIN_SPAWN_INTERVAL: 3, // Increased from 2
 };
 
 export const WORLD_CONFIG = {
