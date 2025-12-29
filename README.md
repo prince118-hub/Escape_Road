@@ -187,9 +187,9 @@ For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Authors
 
-- **Jay Anit** – Lead Programmer, Gameplay Systems  
+- **Jay Anit** – Project Leader, Physics & AI  
 - **Kent Harvey Savedra** – 3D Assets & Visual Effects, UI/UX  
-- **Prince Charles Aniñon** – Project Leader, Physics & AI
+- **Prince Charles Aniñon** –  AI Lead Programmer, Gameplay Systems
 
 **ITE18 Project Team**
 
