@@ -110,27 +110,96 @@ export class WantedSystem {
       return; // Don't spawn if at max
     }
 
-    // Calculate spawn position - different strategies based on wanted level
+    // Calculate spawn position - ONLY on valid roads
     const playerPos = this.playerRef.getPosition();
     let spawnPos;
 
-    // At higher wanted levels, spawn from multiple directions
+    // Get road-aligned spawn positions based on wanted level
     if (this.currentWantedLevel >= 3) {
-      // Spawn from all sides (behind, sides, front)
-      const angle = Math.random() * Math.PI * 2;
-      const distance = 50 + Math.random() * 30;
-      spawnPos = {
-        x: playerPos.x + Math.cos(angle) * distance,
-        z: playerPos.z + Math.sin(angle) * distance,
-      };
+      // Spawn from multiple road directions at high wanted levels
+      const roadDirections = [
+        { dx: 0, dz: 1, name: 'north' },   // Road going north
+        { dx: 0, dz: -1, name: 'south' },  // Road going south
+        { dx: 1, dz: 0, name: 'east' },    // Road going east
+        { dx: -1, dz: 0, name: 'west' }    // Road going west
+      ];
+      
+      const direction = roadDirections[Math.floor(Math.random() * roadDirections.length)];
+      const spawnDistance = 50 + Math.random() * 30;
+      
+      // Spawn ON the road lane
+      const laneOffset = (Math.random() < 0.5 ? -4 : 4); // Left or right lane
+      
+      if (direction.dx === 0) {
+        // Vertical road (north-south)
+        spawnPos = {
+          x: Math.round(playerPos.x / 100) * 100 + laneOffset, // Snap to nearest road X + lane offset
+          z: playerPos.z + direction.dz * spawnDistance
+        };
+      } else {
+        // Horizontal road (east-west)
+        spawnPos = {
+          x: playerPos.x + direction.dx * spawnDistance,
+          z: Math.round(playerPos.z / 100) * 100 + laneOffset  // Snap to nearest road Z + lane offset
+        };
+      }
     } else {
-      // Lower levels: spawn behind player
+      // Lower levels: spawn on road behind player
       const spawnDistance = 40 + Math.random() * 20;
-      const lateralOffset = (Math.random() - 0.5) * 60;
-      spawnPos = {
-        x: playerPos.x + lateralOffset,
-        z: playerPos.z + spawnDistance,
-      };
+      
+      // Determine which road the player is closest to
+      const nearestRoadX = Math.round(playerPos.x / 100) * 100;
+      const nearestRoadZ = Math.round(playerPos.z / 100) * 100;
+      
+      const distToVerticalRoad = Math.abs(playerPos.x - nearestRoadX);
+      const distToHorizontalRoad = Math.abs(playerPos.z - nearestRoadZ);
+      
+      // Choose lane offset (left or right lane)
+      const laneOffset = (Math.random() < 0.5 ? -4 : 4);
+      
+      if (distToVerticalRoad < distToHorizontalRoad) {
+        // Spawn on vertical road
+        spawnPos = {
+          x: nearestRoadX + laneOffset,
+          z: playerPos.z + spawnDistance
+        };
+      } else {
+        // Spawn on horizontal road
+        spawnPos = {
+          x: playerPos.x + spawnDistance,
+          z: nearestRoadZ + laneOffset
+        };
+      }
+    }
+
+    // Validate spawn position is not inside a building
+    if (this.cityRef) {
+      const buildings = this.cityRef.getBuildings();
+      let isValid = true;
+      
+      for (const building of buildings) {
+        const halfWidth = building.geometry.parameters.width / 2 + 5; // 5 unit buffer
+        const halfDepth = building.geometry.parameters.depth / 2 + 5;
+        
+        if (
+          spawnPos.x >= building.position.x - halfWidth &&
+          spawnPos.x <= building.position.x + halfWidth &&
+          spawnPos.z >= building.position.z - halfDepth &&
+          spawnPos.z <= building.position.z + halfDepth
+        ) {
+          isValid = false;
+          break;
+        }
+      }
+      
+      // If spawn position is invalid, try alternate road
+      if (!isValid) {
+        const laneOffset = (Math.random() < 0.5 ? -4 : 4);
+        spawnPos = {
+          x: Math.round(playerPos.x / 100) * 100 + laneOffset,
+          z: playerPos.z + (50 + Math.random() * 30)
+        };
+      }
     }
 
     // Create new police car
@@ -149,7 +218,7 @@ export class WantedSystem {
     console.log(
       `🚔 Spawned police car at (${spawnPos.x.toFixed(1)}, ${spawnPos.z.toFixed(
         1
-      )})`
+      )}) on road`
     );
   }
 

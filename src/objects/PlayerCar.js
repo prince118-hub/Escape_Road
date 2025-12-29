@@ -156,26 +156,57 @@ export class PlayerCar {
         return;
       }
 
-      // Phase 2: Auto-reverse - car automatically backs away from building
+      // Phase 2: Auto-reverse - smooth controlled backing away
       if (this.crashReverseTimer > 0) {
-        const reverseSpeed = 20; // Very fast escape
-        this.position.x +=
-          this.crashReverseDirection.x * reverseSpeed * deltaTime;
-        this.position.z +=
-          this.crashReverseDirection.z * reverseSpeed * deltaTime;
+        const maxReverseSpeed = 12; // Controlled reverse speed
+        const reverseProgress = 1.0 - (this.crashReverseTimer / 0.8); // 0 to 1
+        
+        // Smooth acceleration curve: slow start, peak in middle, slow end
+        let speedMultiplier;
+        if (reverseProgress < 0.3) {
+          // Accelerate smoothly (0 to 1)
+          speedMultiplier = reverseProgress / 0.3;
+        } else if (reverseProgress > 0.7) {
+          // Decelerate smoothly (1 to 0)
+          speedMultiplier = (1.0 - reverseProgress) / 0.3;
+        } else {
+          // Constant speed in middle
+          speedMultiplier = 1.0;
+        }
+        
+        const currentReverseSpeed = maxReverseSpeed * speedMultiplier;
+        
+        // Normalize reverse direction to ensure consistent movement
+        const dirLength = Math.sqrt(
+          this.crashReverseDirection.x ** 2 + this.crashReverseDirection.z ** 2
+        );
+        
+        if (dirLength > 0.01) {
+          const normX = this.crashReverseDirection.x / dirLength;
+          const normZ = this.crashReverseDirection.z / dirLength;
+          
+          // Move strictly along reverse direction - no sliding
+          this.position.x += normX * currentReverseSpeed * deltaTime;
+          this.position.z += normZ * currentReverseSpeed * deltaTime;
+          
+          // Keep velocity synced for collision system
+          this.velocity.x = normX * currentReverseSpeed;
+          this.velocity.z = normZ * currentReverseSpeed;
+        }
 
-        this.velocity.x = 0;
-        this.velocity.z = 0;
-        this.speed = 0;
-
+        this.speed = 0; // Prevent normal speed from interfering
         this.crashReverseTimer -= deltaTime;
 
         if (this.crashReverseTimer <= 0) {
-          // Crash recovery complete - return to normal
+          // Crash recovery complete - smooth transition back to normal
           this.isCrashed = false;
           this.crashReverseTimer = 0;
           this.crashStunTimer = 0;
           this.crashReverseDirection = { x: 0, z: 0 };
+          
+          // Gradual velocity decay instead of instant stop
+          this.velocity.x *= 0.3;
+          this.velocity.z *= 0.3;
         }
 
         this._updateMesh();

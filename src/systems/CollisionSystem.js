@@ -180,17 +180,17 @@ export class CollisionSystem {
     const playerPos = this.playerRef.getPosition();
     const playerRadius = 1.5;
 
-    // Calculate impact speed for damage calculation
+    // Calculate impact speed for visual/audio feedback
     const impactSpeed = Math.sqrt(
       this.playerRef.velocity.x ** 2 + this.playerRef.velocity.z ** 2
     );
 
-    // Stop the player immediately (CRASH!)
+    // IMMEDIATE COMPLETE STOP - no bouncing or sliding
     this.playerRef.velocity.x = 0;
     this.playerRef.velocity.z = 0;
     this.playerRef.speed = 0;
 
-    // Calculate collision normal (direction to push away)
+    // Calculate collision normal (direction away from building)
     const buildingCenter = {
       x: (buildingBox.min.x + buildingBox.max.x) / 2,
       z: (buildingBox.min.z + buildingBox.max.z) / 2,
@@ -203,68 +203,58 @@ export class CollisionSystem {
     const normalizedDx = distance > 0 ? dx / distance : 1;
     const normalizedDz = distance > 0 ? dz / distance : 0;
 
-    // Determine which face was hit
+    // Determine which face was hit for precise positioning
     const buildingWidth = buildingBox.max.x - buildingBox.min.x;
     const buildingDepth = buildingBox.max.z - buildingBox.min.z;
     const absNormDx = Math.abs(dx) / buildingWidth;
     const absNormDz = Math.abs(dz) / buildingDepth;
 
-    // Push player slightly out of building (minimal - let auto-reverse handle the rest)
-    const minClearance = playerRadius + 2.0;
+    // Push player out of building to prevent penetration
+    const minClearance = playerRadius + 0.5;
     if (absNormDx > absNormDz) {
       // Hit left or right side
       this.playerRef.position.x =
         normalizedDx > 0
           ? buildingBox.max.x + minClearance
           : buildingBox.min.x - minClearance;
-      // Set reverse direction
-      this.playerRef.crashReverseDirection.x = normalizedDx > 0 ? 1 : -1;
-      this.playerRef.crashReverseDirection.z = 0;
     } else {
       // Hit front or back
       this.playerRef.position.z =
         normalizedDz > 0
           ? buildingBox.max.z + minClearance
           : buildingBox.min.z - minClearance;
-      // Set reverse direction
-      this.playerRef.crashReverseDirection.x = 0;
-      this.playerRef.crashReverseDirection.z = normalizedDz > 0 ? 1 : -1;
     }
 
-    // Start crash sequence: stun then auto-reverse
-    this.playerRef.isCrashed = true;
-    this.playerRef.crashStunTimer = 0.5; // 500ms stun (car stopped completely)
-    this.playerRef.crashReverseTimer = 0.7; // 700ms auto-reverse after stun
+    // Calculate reverse direction ALONG CAR'S FACING DIRECTION (not collision normal)
+    // This ensures realistic backing up behavior
+    const carForwardX = Math.sin(this.playerRef.rotation);
+    const carForwardZ = Math.cos(this.playerRef.rotation);
+    
+    // Reverse is opposite of car's facing direction
+    this.playerRef.crashReverseDirection.x = -carForwardX;
+    this.playerRef.crashReverseDirection.z = -carForwardZ;
 
-    // No damage - player can crash infinitely without dying
-    // Game over only happens when trapped between police cars
+    // Start smooth crash sequence: brief stop, then controlled reverse
+    this.playerRef.isCrashed = true;
+    this.playerRef.crashStunTimer = 0.2; // 200ms brief stop for impact feel
+    this.playerRef.crashReverseTimer = 0.8; // 800ms smooth reverse
 
     // Extended cooldown to prevent re-collision during recovery
-    this.collisionCooldown = 1500; // 1.5 seconds
+    this.collisionCooldown = 1200;
 
-    // Enhanced visual effects based on impact
-    const effectIntensity = Math.min(1.5, 0.5 + impactSpeed / 25);
+    // Visual effects based on impact
+    const effectIntensity = Math.min(1.2, 0.4 + impactSpeed / 30);
     if (this.effectsSystem) {
       this.effectsSystem.createCollisionEffect(playerPos, effectIntensity);
       this.effectsSystem.createSparks(playerPos, {
         x: normalizedDx,
         z: normalizedDz,
       });
-
-      // Extra debris for high-speed crashes
-      if (impactSpeed > 15) {
-        setTimeout(() => {
-          this.effectsSystem.createCollisionEffect(
-            { x: playerPos.x, y: 1, z: playerPos.z },
-            0.8
-          );
-        }, 100);
-      }
     }
 
     // Sound with intensity based on impact
     if (this.soundSystem) {
-      const volume = Math.min(1.0, 0.4 + impactSpeed / 30);
+      const volume = Math.min(0.8, 0.3 + impactSpeed / 35);
       this.soundSystem.playCollisionSound(volume);
     }
   }
@@ -373,31 +363,64 @@ export class CollisionSystem {
   }
 
   /**
-   * Handle player collision with traffic car using Newton's laws
+   * Handle player collision with traffic car with smooth stop-reverse
    * @private
    */
   _handlePlayerTrafficCollision(trafficCar) {
     const playerPos = this.playerRef.getPosition();
+    const carPos = trafficCar.getPosition();
 
-    this.collisionCooldown = this.cooldownDuration;
+    // Calculate impact speed
+    const impactSpeed = Math.sqrt(
+      this.playerRef.velocity.x ** 2 + this.playerRef.velocity.z ** 2
+    );
 
+    // IMMEDIATE COMPLETE STOP - no bouncing
+    this.playerRef.velocity.x = 0;
+    this.playerRef.velocity.z = 0;
+    this.playerRef.speed = 0;
+
+    // Calculate separation direction
+    const dx = playerPos.x - carPos.x;
+    const dz = playerPos.z - carPos.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+
+    if (distance > 0.01) {
+      // Push player slightly out to prevent overlap
+      const separationDist = 2.5;
+      this.playerRef.position.x = carPos.x + (dx / distance) * separationDist;
+      this.playerRef.position.z = carPos.z + (dz / distance) * separationDist;
+    }
+
+    // Set reverse direction ALONG CAR'S FACING DIRECTION
+    const carForwardX = Math.sin(this.playerRef.rotation);
+    const carForwardZ = Math.cos(this.playerRef.rotation);
+    
+    this.playerRef.crashReverseDirection.x = -carForwardX;
+    this.playerRef.crashReverseDirection.z = -carForwardZ;
+
+    // Trigger smooth crash response
+    this.playerRef.isCrashed = true;
+    this.playerRef.crashStunTimer = 0.15; // Brief stop
+    this.playerRef.crashReverseTimer = 0.6; // Quick reverse
+
+    this.collisionCooldown = 800;
+
+    // Effects and sound
     if (this.effectsSystem) {
-      this.effectsSystem.createCollisionEffect(playerPos, 0.7);
+      this.effectsSystem.createCollisionEffect(playerPos, 0.5);
     }
 
     if (this.soundSystem) {
-      this.soundSystem.playCollisionSound(0.6);
+      this.soundSystem.playCollisionSound(0.5);
     }
 
-    // Apply Newton's laws with realistic momentum transfer
-    this._resolveVehiclePair(this.playerRef, trafficCar, {
-      elasticity: 0.45, // Bouncy collision
-      friction: 0.65,
-      massA: 1.1, // Player slightly heavier
-      massB: 0.9, // Traffic lighter
-      minSeparation: 0.3,
-      pushStrength: 2.0,
-    });
+    // Apply small push to traffic car for realism
+    if (trafficCar.velocity) {
+      const pushForce = 3.0;
+      trafficCar.velocity.x += (dx / distance) * pushForce;
+      trafficCar.velocity.z += (dz / distance) * pushForce;
+    }
   }
 
   /**
