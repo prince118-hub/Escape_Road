@@ -34,18 +34,18 @@ export class MenuSystem {
     this.menuMusic.loop = true;
     this.menuMusic.volume = 0.3;
     this.musicReady = false;
-    
+
     // Preload the audio
     this.menuMusic.load();
-    
+
     // Add error handler to debug loading issues
-    this.menuMusic.addEventListener('error', (e) => {
-      console.error('❌ Failed to load menu music:', e);
-      console.error('Attempted path:', this.menuMusic.src);
+    this.menuMusic.addEventListener("error", (e) => {
+      console.error("❌ Failed to load menu music:", e);
+      console.error("Attempted path:", this.menuMusic.src);
     });
-    
-    this.menuMusic.addEventListener('canplaythrough', () => {
-      console.log('✅ Menu music loaded successfully');
+
+    this.menuMusic.addEventListener("canplaythrough", () => {
+      console.log("✅ Menu music loaded successfully");
     });
   }
 
@@ -56,42 +56,42 @@ export class MenuSystem {
   async playMenuMusic() {
     if (!this.menuMusic) return;
     if (this.musicReady) return; // Already playing
-    
+
     this.menuMusic.currentTime = 0;
-    
+
     try {
       // First try: Play with sound
       await this.menuMusic.play();
       this.musicReady = true;
-      console.log('🎵 Menu music playing with sound');
+      console.log("🎵 Menu music playing with sound");
     } catch (err) {
-      console.log('⏸️ Waiting for user interaction to play music...');
-      
+      console.log("⏸️ Waiting for user interaction to play music...");
+
       // Play on ANY user interaction
       const startMusic = async () => {
         if (this.musicReady) return;
-        
+
         try {
           this.menuMusic.currentTime = 0;
           await this.menuMusic.play();
           this.musicReady = true;
-          console.log('🎵 Menu music started!');
-          
+          console.log("🎵 Menu music started!");
+
           // Remove all listeners
-          document.removeEventListener('click', startMusic);
-          document.removeEventListener('keydown', startMusic);
-          document.removeEventListener('mousemove', startMusic);
-          document.removeEventListener('touchstart', startMusic);
+          document.removeEventListener("click", startMusic);
+          document.removeEventListener("keydown", startMusic);
+          document.removeEventListener("mousemove", startMusic);
+          document.removeEventListener("touchstart", startMusic);
         } catch (playErr) {
-          console.warn('Failed to start music:', playErr.message);
+          console.warn("Failed to start music:", playErr.message);
         }
       };
-      
+
       // Listen to multiple interaction types
-      document.addEventListener('click', startMusic, { once: true });
-      document.addEventListener('keydown', startMusic, { once: true });
-      document.addEventListener('mousemove', startMusic, { once: true });
-      document.addEventListener('touchstart', startMusic, { once: true });
+      document.addEventListener("click", startMusic, { once: true });
+      document.addEventListener("keydown", startMusic, { once: true });
+      document.addEventListener("mousemove", startMusic, { once: true });
+      document.addEventListener("touchstart", startMusic, { once: true });
     }
   }
 
@@ -337,7 +337,7 @@ export class MenuSystem {
   showMainMenu() {
     this.mainMenu.style.display = "flex";
     // Start menu music immediately
-    console.log('🎵 Attempting to play menu music...');
+    console.log("🎵 Attempting to play menu music...");
     this.playMenuMusic();
   }
 
@@ -366,7 +366,7 @@ export class MenuSystem {
     `;
 
     this.gameOverMenu.style.display = "flex";
-    
+
     // Start menu music on game over
     this.playMenuMusic();
   }
@@ -411,7 +411,7 @@ export class MenuSystem {
       this.menuMusic.pause();
       this.menuMusic = null;
     }
-    
+
     [this.mainMenu, this.pauseMenu, this.gameOverMenu].forEach((menu) => {
       if (menu && menu.parentElement) {
         menu.parentElement.removeChild(menu);
