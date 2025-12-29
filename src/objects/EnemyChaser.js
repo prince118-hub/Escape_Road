@@ -48,7 +48,27 @@ export class EnemyChaser {
     this.skidMarkSystem = null; // Skid mark system reference
     this.skidMarkTimer = 0; // Timer to control skid mark frequency
     this.previousSpeed = 0; // Track previous speed for acceleration/braking detection
+
+    // Siren audio
+    this.sirenAudio = null;
+    this._initSirenAudio();
+
     this._loadAndCreateMesh();
+  }
+
+  /**
+   * Initialize siren audio for this police car
+   * @private
+   */
+  _initSirenAudio() {
+    this.sirenAudio = new Audio(
+      "/background_music/Police Car Siren Sound Effect.mp3"
+    );
+    this.sirenAudio.loop = true;
+    this.sirenAudio.volume = 0; // Start at 0, will be updated based on distance
+    this.sirenAudio.play().catch((err) => {
+      console.warn("Could not play police siren:", err);
+    });
   }
 
   /**
@@ -188,6 +208,9 @@ export class EnemyChaser {
 
     // Flash lights
     this._updateLights(deltaTime);
+
+    // Update siren volume based on distance
+    this._updateSirenVolume();
 
     // Update mesh
     this._updateMesh();
@@ -514,6 +537,53 @@ export class EnemyChaser {
   }
 
   /**
+   * Update siren volume based on distance to player
+   * @private
+   */
+  _updateSirenVolume() {
+    if (!this.sirenAudio) return;
+
+    // Calculate volume based on distance (0-100 units)
+    const maxHearingDistance = 100; // Maximum distance to hear siren
+    const minDistance = 5; // Distance for maximum volume
+
+    // Clamp distance
+    const effectiveDistance = Math.max(
+      minDistance,
+      Math.min(this.distanceToPlayer, maxHearingDistance)
+    );
+
+    // Calculate volume (inverse relationship with distance)
+    // At minDistance: volume = 0.15 (max)
+    // At maxHearingDistance: volume = 0
+    const volume =
+      0.15 *
+      (1 -
+        (effectiveDistance - minDistance) / (maxHearingDistance - minDistance));
+
+    this.sirenAudio.volume = Math.max(0, Math.min(0.15, volume));
+  }
+
+  /**
+   * Pause the siren audio
+   */
+  pauseSiren() {
+    if (this.sirenAudio) {
+      this.sirenAudio.pause();
+    }
+  }
+
+  /**
+   * Resume the siren audio
+   */
+  resumeSiren() {
+    if (this.sirenAudio) {
+      this.sirenAudio.play().catch((err) => {
+        console.warn("Could not resume police siren:", err);
+      });
+    }
+  }
+  /**
    * Update Three.js mesh
    * @private
    */
@@ -580,6 +650,12 @@ export class EnemyChaser {
    * Cleanup resources
    */
   dispose() {
+    // Stop and cleanup siren
+    if (this.sirenAudio) {
+      this.sirenAudio.pause();
+      this.sirenAudio = null;
+    }
+
     if (this.mesh) {
       this.scene.remove(this.mesh);
       this.mesh.traverse((child) => {

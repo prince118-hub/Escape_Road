@@ -16,7 +16,83 @@ export class MenuSystem {
     this.onResumeGame = null;
     this.onRestartGame = null;
 
+    // Background music
+    this.menuMusic = null;
+    this._initMenuMusic();
+
     this._createMenus();
+  }
+
+  /**
+   * Initialize menu background music
+   * @private
+   */
+  _initMenuMusic() {
+    this.menuMusic = new Audio(
+      "/background_music/Sport Rock Racing by Infraction [No Copyright Music]  Hit Someone.mp3"
+    );
+    this.menuMusic.loop = true;
+    this.menuMusic.volume = 0.3;
+    this.musicReady = false;
+
+    // Preload the audio
+    this.menuMusic.load();
+
+    // Add error handler to debug loading issues
+    this.menuMusic.addEventListener("error", (e) => {
+      console.error("❌ Failed to load menu music:", e);
+      console.error("Attempted path:", this.menuMusic.src);
+    });
+
+    this.menuMusic.addEventListener("canplaythrough", () => {
+      console.log("✅ Menu music loaded successfully");
+    });
+  }
+
+  /**
+   * Try to play menu music (handles autoplay policy)
+   * @private
+   */
+  async playMenuMusic() {
+    if (!this.menuMusic) return;
+    if (this.musicReady) return; // Already playing
+
+    this.menuMusic.currentTime = 0;
+
+    try {
+      // First try: Play with sound
+      await this.menuMusic.play();
+      this.musicReady = true;
+      console.log("🎵 Menu music playing with sound");
+    } catch (err) {
+      console.log("⏸️ Waiting for user interaction to play music...");
+
+      // Play on ANY user interaction
+      const startMusic = async () => {
+        if (this.musicReady) return;
+
+        try {
+          this.menuMusic.currentTime = 0;
+          await this.menuMusic.play();
+          this.musicReady = true;
+          console.log("🎵 Menu music started!");
+
+          // Remove all listeners
+          document.removeEventListener("click", startMusic);
+          document.removeEventListener("keydown", startMusic);
+          document.removeEventListener("mousemove", startMusic);
+          document.removeEventListener("touchstart", startMusic);
+        } catch (playErr) {
+          console.warn("Failed to start music:", playErr.message);
+        }
+      };
+
+      // Listen to multiple interaction types
+      document.addEventListener("click", startMusic, { once: true });
+      document.addEventListener("keydown", startMusic, { once: true });
+      document.addEventListener("mousemove", startMusic, { once: true });
+      document.addEventListener("touchstart", startMusic, { once: true });
+    }
   }
 
   /**
@@ -260,10 +336,17 @@ export class MenuSystem {
   // Show/hide methods
   showMainMenu() {
     this.mainMenu.style.display = "flex";
+    // Start menu music immediately
+    console.log("🎵 Attempting to play menu music...");
+    this.playMenuMusic();
   }
 
   hideMainMenu() {
     this.mainMenu.style.display = "none";
+    // Stop menu music
+    if (this.menuMusic) {
+      this.menuMusic.pause();
+    }
   }
 
   showPauseMenu() {
@@ -283,10 +366,17 @@ export class MenuSystem {
     `;
 
     this.gameOverMenu.style.display = "flex";
+
+    // Start menu music on game over
+    this.playMenuMusic();
   }
 
   hideGameOverMenu() {
     this.gameOverMenu.style.display = "none";
+    // Stop menu music
+    if (this.menuMusic) {
+      this.menuMusic.pause();
+    }
   }
 
   /**
@@ -316,6 +406,12 @@ export class MenuSystem {
    * Cleanup menus
    */
   dispose() {
+    // Stop and cleanup music
+    if (this.menuMusic) {
+      this.menuMusic.pause();
+      this.menuMusic = null;
+    }
+
     [this.mainMenu, this.pauseMenu, this.gameOverMenu].forEach((menu) => {
       if (menu && menu.parentElement) {
         menu.parentElement.removeChild(menu);

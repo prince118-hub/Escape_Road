@@ -146,7 +146,7 @@ export class TrafficCar {
   /**
    * Update traffic car movement
    */
-  update(deltaTime, cityRef = null) {
+  update(deltaTime, cityRef = null, otherCars = []) {
     if (!this.isActive || !this.modelLoaded || !this.mesh) return;
 
     // Handle collision reverse behavior
@@ -167,6 +167,9 @@ export class TrafficCar {
       }
     }
 
+    // Check for nearby traffic cars and slow down to maintain spacing
+    this._avoidOtherCars(otherCars, deltaTime);
+
     // Move in lane direction
     this.position.x += this.direction.x * this.speed * deltaTime;
     this.position.z += this.direction.z * this.speed * deltaTime;
@@ -181,13 +184,53 @@ export class TrafficCar {
       this.mesh.position.set(this.position.x, 0.5, this.position.z);
     }
 
-    // Check if car is too far from origin (despawn)
+    // Check if car is too far from origin (despawn) - increased distance
     const distanceFromOrigin = Math.sqrt(
       this.position.x ** 2 + this.position.z ** 2
     );
-    if (distanceFromOrigin > 150) {
+    if (distanceFromOrigin > 300) {
       this.isActive = false;
     }
+  }
+
+  /**
+   * Avoid colliding with other traffic cars
+   * @private
+   */
+  _avoidOtherCars(otherCars, deltaTime) {
+    const safeDistance = 8; // Minimum distance to maintain
+    const slowDownDistance = 12; // Distance at which to start slowing down
+
+    for (const otherCar of otherCars) {
+      if (otherCar === this || !otherCar.isActiveVehicle()) continue;
+
+      const otherPos = otherCar.getPosition();
+      const dx = otherPos.x - this.position.x;
+      const dz = otherPos.z - this.position.z;
+      const distance = Math.sqrt(dx * dx + dz * dz);
+
+      // Check if car is ahead in the same lane
+      const isAhead =
+        (this.lane === 0 && dz < 0 && Math.abs(dx) < 3) || // Forward lane
+        (this.lane === 1 && dz > 0 && Math.abs(dx) < 3) || // Backward lane
+        (this.lane === 2 && dx < 0 && Math.abs(dz) < 3) || // Left lane
+        (this.lane === 3 && dx > 0 && Math.abs(dz) < 3); // Right lane
+
+      if (isAhead && distance < slowDownDistance) {
+        // Gradually slow down as we get closer
+        const slowFactor = distance / slowDownDistance;
+        this.speed = this.originalSpeed * Math.max(0.3, slowFactor);
+
+        // Stop if too close
+        if (distance < safeDistance) {
+          this.speed = 0;
+        }
+        return; // Only react to the nearest car ahead
+      }
+    }
+
+    // No cars nearby, maintain original speed
+    this.speed = this.originalSpeed;
   }
 
   /**
@@ -315,7 +358,7 @@ export class TrafficManager {
     this.cityRef = cityRef; // Reference to city for building collision
     this.trafficCars = [];
     this.spawnTimer = 0;
-    this.spawnInterval = 2; // Spawn every 2 seconds for more traffic
+    this.spawnInterval = 0.5; // Balanced spawn rate
     this._firstUpdateLogged = false; // Flag for debug logging
   }
 
@@ -333,7 +376,11 @@ export class TrafficManager {
 
     // Spawn new traffic cars periodically
     if (this.spawnTimer >= this.spawnInterval) {
-      this._spawnTrafficCar();
+      // Spawn 1-2 cars at once for balanced traffic
+      const carsToSpawn = randomInt(1, 3);
+      for (let i = 0; i < carsToSpawn; i++) {
+        this._spawnTrafficCar();
+      }
       this.spawnTimer = 0;
     }
 
@@ -357,8 +404,8 @@ export class TrafficManager {
    * @private
    */
   _spawnTrafficCar() {
-    // Limit number of traffic cars
-    if (this.trafficCars.length >= 25) return;
+    // Limit number of traffic cars - reduced to prevent clustering
+    if (this.trafficCars.length >= 70) return;
 
     // Choose random lane with better distribution
     const lane = randomInt(0, 3);
@@ -366,37 +413,55 @@ export class TrafficManager {
     // Calculate spawn position based on lane - spawn closer and on actual roads
     let spawnPosition;
     const roadWidth = 10; // Width of main roads
-    const laneOffset = 3; // Offset from center for lane positioning
+
+    // Create proper lane system - each direction has left and right lanes
+    const laneOffset = Math.random() > 0.5 ? -2.5 : 2.5; // Left or right lane
+
+    // Randomize spawn distance for better distribution across entire road
+    const spawnDistance = random(25, 120);
 
     switch (lane) {
       case 0: // Forward lane (travels south, spawns north)
         spawnPosition = {
-          x: random(-laneOffset, laneOffset), // Stay on vertical road
+          x: laneOffset, // Proper lane positioning
           y: 0,
-          z: random(-60, -40), // Spawn closer ahead
+          z: -spawnDistance, // Spawn ahead
         };
         break;
       case 1: // Backward lane (travels north, spawns south)
         spawnPosition = {
-          x: random(-laneOffset, laneOffset), // Stay on vertical road
+          x: laneOffset, // Proper lane positioning
           y: 0,
-          z: random(40, 60), // Spawn behind player
+          z: spawnDistance, // Spawn behind
         };
         break;
       case 2: // Left lane (travels west, spawns east)
         spawnPosition = {
-          x: random(40, 60), // Spawn to the right
+          x: spawnDistance, // Spawn to the right
           y: 0,
-          z: random(-laneOffset, laneOffset), // Stay on horizontal road
+          z: laneOffset, // Proper lane positioning
         };
         break;
       case 3: // Right lane (travels east, spawns west)
         spawnPosition = {
-          x: random(-60, -40), // Spawn to the left
+          x: -spawnDistance, // Spawn to the left
           y: 0,
-          z: random(-laneOffset, laneOffset), // Stay on horizontal road
+          z: laneOffset, // Proper lane positioning
         };
         break;
+    }
+
+    // Check if spawn position is too close to existing cars
+    const minSpawnDistance = 15;
+    for (const car of this.trafficCars) {
+      const pos = car.getPosition();
+      const dx = pos.x - spawnPosition.x;
+      const dz = pos.z - spawnPosition.z;
+      const distance = Math.sqrt(dx * dx + dz * dz);
+
+      if (distance < minSpawnDistance) {
+        return; // Don't spawn, too close to another car
+      }
     }
 
     const car = new TrafficCar(this.scene, spawnPosition, lane);

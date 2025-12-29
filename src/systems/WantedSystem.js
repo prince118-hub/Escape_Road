@@ -13,7 +13,8 @@ export class WantedSystem {
     enemiesArrayRef,
     wantedConfig,
     cityRef = null,
-    skidMarkSystem = null
+    skidMarkSystem = null,
+    soundSystem = null
   ) {
     this.scene = scene;
     this.playerRef = playerRef;
@@ -21,6 +22,7 @@ export class WantedSystem {
     this.config = wantedConfig;
     this.cityRef = cityRef; // Reference to city for building collision
     this.skidMarkSystem = skidMarkSystem; // Reference to skid mark system
+    this.soundSystem = soundSystem; // Reference to sound system
 
     // Wanted level state
     this.currentWantedLevel = 1; // Start at 1 star

@@ -192,7 +192,8 @@ class Game {
       this.enemies, // Pass enemies array reference so WantedSystem can add to it
       WANTED_CONFIG,
       this.city, // Pass city reference for building collision
-      this.skidMarkSystem // Pass skid mark system to wanted system
+      this.skidMarkSystem, // Pass skid mark system to wanted system
+      this.soundSystem // Pass sound system for police siren
     );
     console.log("✅ All game systems created");
 
@@ -329,6 +330,13 @@ class Game {
     this.menuSystem.showPauseMenu();
     this.hud.hide();
 
+    // Stop all police sirens when paused
+    this.enemies.forEach((enemy) => {
+      if (enemy.pauseSiren) {
+        enemy.pauseSiren();
+      }
+    });
+
     console.log("⏸️ Game paused");
   }
 
@@ -339,6 +347,13 @@ class Game {
     this.gameLoop.resume();
     this.menuSystem.hidePauseMenu();
     this.hud.show();
+
+    // Resume all police sirens
+    this.enemies.forEach((enemy) => {
+      if (enemy.resumeSiren) {
+        enemy.resumeSiren();
+      }
+    });
 
     console.log("▶️ Game resumed");
   }
@@ -354,6 +369,13 @@ class Game {
 
     this.isPlaying = false;
     this.gameLoop.stop();
+
+    // Stop all police sirens when game over
+    this.enemies.forEach((enemy) => {
+      if (enemy.pauseSiren) {
+        enemy.pauseSiren();
+      }
+    });
 
     // Get final statistics
     const stats = this.scoreSystem.getStatistics();
