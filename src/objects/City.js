@@ -1769,7 +1769,7 @@ export class City {
   _addMinimalStreetFurniture(origin) {
     const roadWidth = ROAD_CONFIG.SEGMENT_WIDTH;
     const offset = roadWidth / 2 + 2.5;
-    
+
     // Always add street lights
     this.streetFurniture.createIntersectionLights(
       origin.x,
@@ -1792,7 +1792,7 @@ export class City {
       roadWidth,
       true
     );
-    
+
     // South crosswalk
     this.streetFurniture.createCrosswalk(
       origin.x,
@@ -1800,7 +1800,7 @@ export class City {
       roadWidth,
       true
     );
-    
+
     // East crosswalk
     this.streetFurniture.createCrosswalk(
       origin.x + offset,
@@ -1808,7 +1808,7 @@ export class City {
       roadWidth,
       false
     );
-    
+
     // West crosswalk
     this.streetFurniture.createCrosswalk(
       origin.x - offset,
@@ -1826,7 +1826,7 @@ export class City {
         "stop"
       );
     }
-    
+
     // Add bus stops occasionally
     if (Math.random() > 0.6) {
       this.streetFurniture.createBusStop(

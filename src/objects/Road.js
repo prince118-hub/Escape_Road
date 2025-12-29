@@ -90,10 +90,18 @@ export class Road {
     this._addLaneMarkers(segment);
 
     // Add sidewalks and curbs (integrated into segment)
-    this.streetFurniture.addSidewalk(segment, config.SEGMENT_WIDTH, config.SEGMENT_LENGTH);
+    this.streetFurniture.addSidewalk(
+      segment,
+      config.SEGMENT_WIDTH,
+      config.SEGMENT_LENGTH
+    );
 
     // Add edge lines
-    this.streetFurniture.addRoadEdgeLines(segment, config.SEGMENT_WIDTH, config.SEGMENT_LENGTH);
+    this.streetFurniture.addRoadEdgeLines(
+      segment,
+      config.SEGMENT_WIDTH,
+      config.SEGMENT_LENGTH
+    );
 
     return segment;
   }

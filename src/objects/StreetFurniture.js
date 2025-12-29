@@ -37,9 +37,21 @@ export class StreetFurniture {
       arrowWhite: new THREE.MeshBasicMaterial({ color: 0xffffff }),
       // Traffic light materials
       trafficLightBox: new THREE.MeshLambertMaterial({ color: 0x1a1a1a }),
-      redLight: new THREE.MeshBasicMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.5 }),
-      yellowLight: new THREE.MeshBasicMaterial({ color: 0xffff00, emissive: 0xffff00, emissiveIntensity: 0.3 }),
-      greenLight: new THREE.MeshBasicMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 0.5 }),
+      redLight: new THREE.MeshBasicMaterial({
+        color: 0xff0000,
+        emissive: 0xff0000,
+        emissiveIntensity: 0.5,
+      }),
+      yellowLight: new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        emissive: 0xffff00,
+        emissiveIntensity: 0.3,
+      }),
+      greenLight: new THREE.MeshBasicMaterial({
+        color: 0x00ff00,
+        emissive: 0x00ff00,
+        emissiveIntensity: 0.5,
+      }),
       lightOff: new THREE.MeshLambertMaterial({ color: 0x333333 }),
     };
   }
@@ -166,7 +178,7 @@ export class StreetFurniture {
    * @param {string} activeLight - Which light is on: 'red', 'yellow', 'green'
    * @param {number} rotation - Rotation in radians (which direction it faces)
    */
-  createTrafficLight(x, z, activeLight = 'red', rotation = 0) {
+  createTrafficLight(x, z, activeLight = "red", rotation = 0) {
     const trafficLightGroup = new THREE.Group();
 
     // Pole
@@ -196,7 +208,7 @@ export class StreetFurniture {
     // Red light (top)
     const redLight = new THREE.Mesh(
       this.geometries.signalLight,
-      activeLight === 'red' ? this.materials.redLight : this.materials.lightOff
+      activeLight === "red" ? this.materials.redLight : this.materials.lightOff
     );
     redLight.position.set(0, 5.5, 0.13);
     trafficLightGroup.add(redLight);
@@ -204,7 +216,9 @@ export class StreetFurniture {
     // Yellow light (middle)
     const yellowLight = new THREE.Mesh(
       this.geometries.signalLight,
-      activeLight === 'yellow' ? this.materials.yellowLight : this.materials.lightOff
+      activeLight === "yellow"
+        ? this.materials.yellowLight
+        : this.materials.lightOff
     );
     yellowLight.position.set(0, 5.1, 0.13);
     trafficLightGroup.add(yellowLight);
@@ -212,7 +226,9 @@ export class StreetFurniture {
     // Green light (bottom)
     const greenLight = new THREE.Mesh(
       this.geometries.signalLight,
-      activeLight === 'green' ? this.materials.greenLight : this.materials.lightOff
+      activeLight === "green"
+        ? this.materials.greenLight
+        : this.materials.lightOff
     );
     greenLight.position.set(0, 4.7, 0.13);
     trafficLightGroup.add(greenLight);
@@ -220,7 +236,7 @@ export class StreetFurniture {
     // Position and rotate
     trafficLightGroup.position.set(x, 0, z);
     trafficLightGroup.rotation.y = rotation;
-    
+
     this.scene.add(trafficLightGroup);
     this.streetElements.push(trafficLightGroup);
 
@@ -235,18 +251,38 @@ export class StreetFurniture {
    */
   createIntersectionTrafficLights(x, z, roadWidth = 18) {
     const cornerOffset = roadWidth / 2 + 1; // Position at intersection corners
-    
+
     // Northeast corner - red light facing southwest
-    this.createTrafficLight(x + cornerOffset, z - cornerOffset, 'red', Math.PI / 4);
-    
+    this.createTrafficLight(
+      x + cornerOffset,
+      z - cornerOffset,
+      "red",
+      Math.PI / 4
+    );
+
     // Southeast corner - green light facing northwest
-    this.createTrafficLight(x + cornerOffset, z + cornerOffset, 'green', -Math.PI * 3 / 4);
-    
+    this.createTrafficLight(
+      x + cornerOffset,
+      z + cornerOffset,
+      "green",
+      (-Math.PI * 3) / 4
+    );
+
     // Southwest corner - red light facing northeast
-    this.createTrafficLight(x - cornerOffset, z + cornerOffset, 'red', Math.PI * 3 / 4);
-    
+    this.createTrafficLight(
+      x - cornerOffset,
+      z + cornerOffset,
+      "red",
+      (Math.PI * 3) / 4
+    );
+
     // Northwest corner - green light facing southeast
-    this.createTrafficLight(x - cornerOffset, z - cornerOffset, 'green', -Math.PI / 4);
+    this.createTrafficLight(
+      x - cornerOffset,
+      z - cornerOffset,
+      "green",
+      -Math.PI / 4
+    );
   }
 
   /**
