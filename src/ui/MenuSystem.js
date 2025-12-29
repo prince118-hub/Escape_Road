@@ -29,7 +29,7 @@ export class MenuSystem {
    */
   _initMenuMusic() {
     this.menuMusic = new Audio(
-      "/background_music/Sport Rock Racing by Infraction [No Copyright Music]  Hit Someone.mp3"
+      "/audio/Sport Rock Racing by Infraction [No Copyright Music]  Hit Someone.mp3"
     );
     this.menuMusic.loop = true;
     this.menuMusic.volume = 0.3;
@@ -162,6 +162,7 @@ export class MenuSystem {
         • Avoid obstacles and the police<br>
         • Survive as long as possible<br>
         • Difficulty increases over time
+        
       `
     );
     this.mainMenu.appendChild(instructions);

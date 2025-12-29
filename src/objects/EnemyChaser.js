@@ -62,7 +62,7 @@ export class EnemyChaser {
    */
   _initSirenAudio() {
     this.sirenAudio = new Audio(
-      "/background_music/Police Car Siren Sound Effect.mp3"
+      "/audio/Police Car Siren Sound Effect.mp3"
     );
     this.sirenAudio.loop = true;
     this.sirenAudio.volume = 0; // Start at 0, will be updated based on distance
