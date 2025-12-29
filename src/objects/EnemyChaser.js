@@ -73,7 +73,7 @@ export class EnemyChaser {
       // Use a smaller uniform scale so the police car matches road proportions
       model.scale.set(0.035, 0.035, 0.035);
       // Rotate model to face forward
-  
+
       // Center the model so it sits properly on the road
       model.position.set(0, 0.8, -0.1);
       this.mesh.add(model);

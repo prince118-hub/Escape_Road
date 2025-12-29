@@ -391,10 +391,10 @@ export class CollisionSystem {
 
     // Apply Newton's laws with realistic momentum transfer
     this._resolveVehiclePair(this.playerRef, trafficCar, {
-      elasticity: 0.45,  // Bouncy collision
+      elasticity: 0.45, // Bouncy collision
       friction: 0.65,
-      massA: 1.1,  // Player slightly heavier
-      massB: 0.9,  // Traffic lighter
+      massA: 1.1, // Player slightly heavier
+      massB: 0.9, // Traffic lighter
       minSeparation: 0.3,
       pushStrength: 2.0,
     });
@@ -482,8 +482,10 @@ export class CollisionSystem {
    * @private
    */
   _computeMTV2D(boxA, boxB) {
-    const overlapX = Math.min(boxA.max.x, boxB.max.x) - Math.max(boxA.min.x, boxB.min.x);
-    const overlapZ = Math.min(boxA.max.z, boxB.max.z) - Math.max(boxA.min.z, boxB.min.z);
+    const overlapX =
+      Math.min(boxA.max.x, boxB.max.x) - Math.max(boxA.min.x, boxB.min.x);
+    const overlapZ =
+      Math.min(boxA.max.z, boxB.max.z) - Math.max(boxA.min.z, boxB.min.z);
     if (overlapX <= 0 || overlapZ <= 0) return null;
 
     const centerAx = (boxA.min.x + boxA.max.x) / 2;
@@ -508,7 +510,7 @@ export class CollisionSystem {
    */
   _resolveVehiclePair(objA, objB, options = {}) {
     const {
-      elasticity = 0.4,  // Coefficient of restitution (0=perfectly inelastic, 1=perfectly elastic)
+      elasticity = 0.4, // Coefficient of restitution (0=perfectly inelastic, 1=perfectly elastic)
       friction = 0.6,
       massA = 1,
       massB = 1,
@@ -543,19 +545,21 @@ export class CollisionSystem {
       // Both objects have velocity - apply Newton's collision laws
       const collisionNormal = {
         x: mtv.x !== 0 ? Math.sign(mtv.x) : 0,
-        z: mtv.z !== 0 ? Math.sign(mtv.z) : 0
+        z: mtv.z !== 0 ? Math.sign(mtv.z) : 0,
       };
 
       // Relative velocity along collision normal
       const relVelX = objA.velocity.x - objB.velocity.x;
       const relVelZ = objA.velocity.z - objB.velocity.z;
-      const relVelAlongNormal = relVelX * collisionNormal.x + relVelZ * collisionNormal.z;
+      const relVelAlongNormal =
+        relVelX * collisionNormal.x + relVelZ * collisionNormal.z;
 
       // Don't resolve if velocities are separating
       if (relVelAlongNormal > 0) return true;
 
       // Calculate impulse scalar (Newton's 2nd Law: F = ma, impulse = change in momentum)
-      const impulseMagnitude = -(1 + elasticity) * relVelAlongNormal / totalMass;
+      const impulseMagnitude =
+        (-(1 + elasticity) * relVelAlongNormal) / totalMass;
 
       // Apply impulse to both objects (Newton's 3rd Law: equal and opposite)
       const impulseX = impulseMagnitude * collisionNormal.x;
@@ -574,43 +578,64 @@ export class CollisionSystem {
       objA.velocity.z += tangentZ * objA.velocity.z * (1 - friction);
       objB.velocity.x += tangentX * objB.velocity.x * (1 - friction);
       objB.velocity.z += tangentZ * objB.velocity.z * (1 - friction);
-
     } else if (hasVelA) {
       // Only objA has velocity - transfer momentum based on elasticity
-      const impactStrength = Math.sqrt(objA.velocity.x ** 2 + objA.velocity.z ** 2);
+      const impactStrength = Math.sqrt(
+        objA.velocity.x ** 2 + objA.velocity.z ** 2
+      );
       const collisionNormal = {
         x: mtv.x !== 0 ? Math.sign(mtv.x) : 0,
-        z: mtv.z !== 0 ? Math.sign(mtv.z) : 0
+        z: mtv.z !== 0 ? Math.sign(mtv.z) : 0,
       };
 
       // Reflect velocity with energy loss
-      objA.velocity.x = objA.velocity.x * (1 - elasticity) - collisionNormal.x * impactStrength * elasticity;
-      objA.velocity.z = objA.velocity.z * (1 - elasticity) - collisionNormal.z * impactStrength * elasticity;
+      objA.velocity.x =
+        objA.velocity.x * (1 - elasticity) -
+        collisionNormal.x * impactStrength * elasticity;
+      objA.velocity.z =
+        objA.velocity.z * (1 - elasticity) -
+        collisionNormal.z * impactStrength * elasticity;
 
       // Transfer some momentum to objB if it has speed property
       if (typeof objB.speed === "number") {
-        objB.speed = clamp(objB.speed + impactStrength * 0.3, 4, objB.speed * 1.5);
+        objB.speed = clamp(
+          objB.speed + impactStrength * 0.3,
+          4,
+          objB.speed * 1.5
+        );
       }
     } else if (hasVelB) {
       // Only objB has velocity - transfer momentum based on elasticity
-      const impactStrength = Math.sqrt(objB.velocity.x ** 2 + objB.velocity.z ** 2);
+      const impactStrength = Math.sqrt(
+        objB.velocity.x ** 2 + objB.velocity.z ** 2
+      );
       const collisionNormal = {
         x: mtv.x !== 0 ? -Math.sign(mtv.x) : 0,
-        z: mtv.z !== 0 ? -Math.sign(mtv.z) : 0
+        z: mtv.z !== 0 ? -Math.sign(mtv.z) : 0,
       };
 
       // Reflect velocity with energy loss
-      objB.velocity.x = objB.velocity.x * (1 - elasticity) - collisionNormal.x * impactStrength * elasticity;
-      objB.velocity.z = objB.velocity.z * (1 - elasticity) - collisionNormal.z * impactStrength * elasticity;
+      objB.velocity.x =
+        objB.velocity.x * (1 - elasticity) -
+        collisionNormal.x * impactStrength * elasticity;
+      objB.velocity.z =
+        objB.velocity.z * (1 - elasticity) -
+        collisionNormal.z * impactStrength * elasticity;
 
       // Transfer some momentum to objA if it has speed property
       if (typeof objA.speed === "number") {
-        objA.speed = clamp(objA.speed + impactStrength * 0.3, 4, objA.speed * 1.5);
+        objA.speed = clamp(
+          objA.speed + impactStrength * 0.3,
+          4,
+          objA.speed * 1.5
+        );
       }
     } else {
       // Neither has velocity, just reduce speed (for TrafficCar-style objects)
-      if (typeof objA.speed === "number") objA.speed = clamp(objA.speed * friction, 4, objA.speed);
-      if (typeof objB.speed === "number") objB.speed = clamp(objB.speed * friction, 4, objB.speed);
+      if (typeof objA.speed === "number")
+        objA.speed = clamp(objA.speed * friction, 4, objA.speed);
+      if (typeof objB.speed === "number")
+        objB.speed = clamp(objB.speed * friction, 4, objB.speed);
     }
 
     return true;
@@ -629,12 +654,12 @@ export class CollisionSystem {
     for (let i = 0; i < trafficCars.length; i++) {
       for (let j = i + 1; j < trafficCars.length; j++) {
         this._resolveVehiclePair(trafficCars[i], trafficCars[j], {
-          elasticity: 0.5,  // More bouncy
+          elasticity: 0.5, // More bouncy
           friction: 0.7,
           massA: 0.9,
           massB: 0.9,
           minSeparation: 0.3,
-          pushStrength: 2.0,  // Stronger separation
+          pushStrength: 2.0, // Stronger separation
         });
       }
     }
@@ -645,7 +670,7 @@ export class CollisionSystem {
         this._resolveVehiclePair(enemy, car, {
           elasticity: 0.4,
           friction: 0.65,
-          massA: 1.5,  // Police heavier
+          massA: 1.5, // Police heavier
           massB: 0.9,
           minSeparation: 0.35,
           pushStrength: 2.2,
@@ -688,15 +713,59 @@ export class CollisionSystem {
 
     // Test ALL eight directions (cardinal + diagonal) for maximum fairness
     const directions = [
-      { x: Math.sin(this.playerRef.rotation), z: Math.cos(this.playerRef.rotation), name: 'forward' },
-      { x: -Math.sin(this.playerRef.rotation), z: -Math.cos(this.playerRef.rotation), name: 'backward' },
-      { x: Math.cos(this.playerRef.rotation), z: -Math.sin(this.playerRef.rotation), name: 'left' },
-      { x: -Math.cos(this.playerRef.rotation), z: Math.sin(this.playerRef.rotation), name: 'right' },
+      {
+        x: Math.sin(this.playerRef.rotation),
+        z: Math.cos(this.playerRef.rotation),
+        name: "forward",
+      },
+      {
+        x: -Math.sin(this.playerRef.rotation),
+        z: -Math.cos(this.playerRef.rotation),
+        name: "backward",
+      },
+      {
+        x: Math.cos(this.playerRef.rotation),
+        z: -Math.sin(this.playerRef.rotation),
+        name: "left",
+      },
+      {
+        x: -Math.cos(this.playerRef.rotation),
+        z: Math.sin(this.playerRef.rotation),
+        name: "right",
+      },
       // Diagonals for extra escape routes
-      { x: Math.sin(this.playerRef.rotation) + Math.cos(this.playerRef.rotation), z: Math.cos(this.playerRef.rotation) - Math.sin(this.playerRef.rotation), name: 'forward-left' },
-      { x: Math.sin(this.playerRef.rotation) - Math.cos(this.playerRef.rotation), z: Math.cos(this.playerRef.rotation) + Math.sin(this.playerRef.rotation), name: 'forward-right' },
-      { x: -Math.sin(this.playerRef.rotation) + Math.cos(this.playerRef.rotation), z: -Math.cos(this.playerRef.rotation) - Math.sin(this.playerRef.rotation), name: 'backward-left' },
-      { x: -Math.sin(this.playerRef.rotation) - Math.cos(this.playerRef.rotation), z: -Math.cos(this.playerRef.rotation) + Math.sin(this.playerRef.rotation), name: 'backward-right' }
+      {
+        x:
+          Math.sin(this.playerRef.rotation) + Math.cos(this.playerRef.rotation),
+        z:
+          Math.cos(this.playerRef.rotation) - Math.sin(this.playerRef.rotation),
+        name: "forward-left",
+      },
+      {
+        x:
+          Math.sin(this.playerRef.rotation) - Math.cos(this.playerRef.rotation),
+        z:
+          Math.cos(this.playerRef.rotation) + Math.sin(this.playerRef.rotation),
+        name: "forward-right",
+      },
+      {
+        x:
+          -Math.sin(this.playerRef.rotation) +
+          Math.cos(this.playerRef.rotation),
+        z:
+          -Math.cos(this.playerRef.rotation) -
+          Math.sin(this.playerRef.rotation),
+        name: "backward-left",
+      },
+      {
+        x:
+          -Math.sin(this.playerRef.rotation) -
+          Math.cos(this.playerRef.rotation),
+        z:
+          -Math.cos(this.playerRef.rotation) +
+          Math.sin(this.playerRef.rotation),
+        name: "backward-right",
+      },
     ];
 
     let blockedCount = 0;
@@ -713,7 +782,7 @@ export class CollisionSystem {
 
       const testPos = {
         x: playerPos.x + normX * testDistance,
-        z: playerPos.z + normZ * testDistance
+        z: playerPos.z + normZ * testDistance,
       };
 
       let isBlocked = false;
@@ -776,7 +845,7 @@ export class CollisionSystem {
 
     if (blockedCount >= 8 && isStationary) {
       // Extra confirmation: are there at least 2 police nearby?
-      const nearbyPolice = enemies.filter(e => {
+      const nearbyPolice = enemies.filter((e) => {
         const ePos = e.getPosition?.() || e.position;
         const dist = Math.sqrt(
           (playerPos.x - ePos.x) ** 2 + (playerPos.z - ePos.z) ** 2
@@ -811,44 +880,44 @@ export class CollisionSystem {
       for (const enemy of this.enemiesRef) {
         const enemyPos = enemy.getPosition();
         const enemyBox = enemy.getBoundingBox();
-        
+
         // Calculate center-to-center distance
         const dx = playerPos.x - enemyPos.x;
         const dz = playerPos.z - enemyPos.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
-        
+
         // ENLARGED minimum safe distance (sum of car lengths/widths + buffer)
         const minDist = 6.0; // Increased from 4.5
-        
+
         // If ANY overlap or too close, apply EXTREME immediate separation
         if (dist < minDist) {
           const overlap = minDist - dist;
           const nx = dist > 0.01 ? dx / dist : 1;
           const nz = dist > 0.01 ? dz / dist : 0;
-          
+
           // EXTREME separation force - eliminates all visible overlap
           const separationForce = overlap * 5.5; // Increased from 3.5
-          
+
           // Player gets pushed more (lighter)
           this.playerRef.position.x += nx * separationForce * 0.75;
           this.playerRef.position.z += nz * separationForce * 0.75;
-          
+
           // Enemy gets pushed less (heavier)
           if (enemy.position) {
             enemy.position.x -= nx * separationForce * 0.25;
             enemy.position.z -= nz * separationForce * 0.25;
           }
         }
-        
+
         // Also apply velocity-based separation with AABB check
         if (checkAABBCollision(playerBox, enemyBox)) {
           this._resolveVehiclePair(this.playerRef, enemy, {
-            elasticity: 0.7,  // Very bouncy
-            friction: 0.4,    // Low friction for more bounce
-            massA: 1.0,       // Player
-            massB: 2.0,       // Police very heavy
+            elasticity: 0.7, // Very bouncy
+            friction: 0.4, // Low friction for more bounce
+            massA: 1.0, // Player
+            massB: 2.0, // Police very heavy
             minSeparation: 0.8, // Large separation buffer
-            pushStrength: 6.0,  // EXTREME push force
+            pushStrength: 6.0, // EXTREME push force
           });
         }
       }

@@ -284,7 +284,12 @@ export class PlayerCar {
     this.boostActive = true;
     this.boostTimeRemaining = PLAYER_CONFIG.BOOST_DURATION;
     // Create boost glow by brightening the car color
-    if (this.mesh && this.mesh.children[0] && this.mesh.children[0].material && this.mesh.children[0].material.color) {
+    if (
+      this.mesh &&
+      this.mesh.children[0] &&
+      this.mesh.children[0].material &&
+      this.mesh.children[0].material.color
+    ) {
       this.mesh.children[0].material.color.setHex(0xff6633);
     }
   }
@@ -293,7 +298,12 @@ export class PlayerCar {
     this.boostActive = false;
     this.boostCooldownRemaining = PLAYER_CONFIG.BOOST_COOLDOWN;
     // Restore original car color
-    if (this.mesh && this.mesh.children[0] && this.mesh.children[0].material && this.mesh.children[0].material.color) {
+    if (
+      this.mesh &&
+      this.mesh.children[0] &&
+      this.mesh.children[0].material &&
+      this.mesh.children[0].material.color
+    ) {
       this.mesh.children[0].material.color.setHex(COLORS.PLAYER_CAR);
     }
   }
