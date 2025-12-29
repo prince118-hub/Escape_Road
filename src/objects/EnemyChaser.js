@@ -377,42 +377,45 @@ export class EnemyChaser {
         policeBox.max.z > buildingBox.min.z
       ) {
         // Collision detected - SMOOTH STOP AND REROUTE
-        
+
         // 1. Stop immediately to prevent penetration
         this.position.x = oldX;
         this.position.z = oldZ;
         this.velocity.x = 0;
         this.velocity.z = 0;
-        
+
         // 2. Reduce speed smoothly (decelerate, don't stop instantly)
-        this.speed = Math.max(this.speed * 0.3, ENEMY_CONFIG.INITIAL_SPEED * 0.5);
-        
+        this.speed = Math.max(
+          this.speed * 0.3,
+          ENEMY_CONFIG.INITIAL_SPEED * 0.5
+        );
+
         // 3. Calculate smart reroute direction
         const buildingCenter = {
           x: (buildingBox.min.x + buildingBox.max.x) / 2,
-          z: (buildingBox.min.z + buildingBox.max.z) / 2
+          z: (buildingBox.min.z + buildingBox.max.z) / 2,
         };
-        
+
         // Direction away from building
         const awayX = this.position.x - buildingCenter.x;
         const awayZ = this.position.z - buildingCenter.z;
         const awayDist = Math.sqrt(awayX * awayX + awayZ * awayZ);
-        
+
         if (awayDist > 0.01) {
           // Calculate perpendicular directions (left and right relative to building)
           const perpLeftX = -awayZ / awayDist;
           const perpLeftZ = awayX / awayDist;
           const perpRightX = awayZ / awayDist;
           const perpRightZ = -awayX / awayDist;
-          
+
           // Choose direction that's more aligned with player direction
           const playerPos = this.playerRef.getPosition();
           const toPlayerX = playerPos.x - this.position.x;
           const toPlayerZ = playerPos.z - this.position.z;
-          
+
           const leftDot = perpLeftX * toPlayerX + perpLeftZ * toPlayerZ;
           const rightDot = perpRightX * toPlayerX + perpRightZ * toPlayerZ;
-          
+
           // Choose better direction for pursuit
           let rerouteX, rerouteZ;
           if (leftDot > rightDot) {
@@ -422,12 +425,14 @@ export class EnemyChaser {
             rerouteX = perpRightX;
             rerouteZ = perpRightZ;
           }
-          
+
           // Blend reroute direction with away-from-building direction for safety
           const blendFactor = 0.6; // 60% perpendicular, 40% away
-          const finalX = rerouteX * blendFactor + (awayX / awayDist) * (1 - blendFactor);
-          const finalZ = rerouteZ * blendFactor + (awayZ / awayDist) * (1 - blendFactor);
-          
+          const finalX =
+            rerouteX * blendFactor + (awayX / awayDist) * (1 - blendFactor);
+          const finalZ =
+            rerouteZ * blendFactor + (awayZ / awayDist) * (1 - blendFactor);
+
           // Set new rotation to face reroute direction
           this.rotation = Math.atan2(finalX, finalZ);
           this.targetRotation = this.rotation;
@@ -436,12 +441,12 @@ export class EnemyChaser {
           this.rotation += Math.PI / 2;
           this.targetRotation = this.rotation;
         }
-        
+
         // 4. Move slightly away from building to ensure clearance
         const clearanceDistance = 1.5;
         this.position.x += Math.sin(this.rotation) * clearanceDistance;
         this.position.z += Math.cos(this.rotation) * clearanceDistance;
-        
+
         break; // Handle one collision at a time
       }
     }

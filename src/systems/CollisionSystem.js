@@ -229,7 +229,7 @@ export class CollisionSystem {
     // This ensures realistic backing up behavior
     const carForwardX = Math.sin(this.playerRef.rotation);
     const carForwardZ = Math.cos(this.playerRef.rotation);
-    
+
     // Reverse is opposite of car's facing direction
     this.playerRef.crashReverseDirection.x = -carForwardX;
     this.playerRef.crashReverseDirection.z = -carForwardZ;
@@ -395,7 +395,7 @@ export class CollisionSystem {
     // Set reverse direction ALONG CAR'S FACING DIRECTION
     const carForwardX = Math.sin(this.playerRef.rotation);
     const carForwardZ = Math.cos(this.playerRef.rotation);
-    
+
     this.playerRef.crashReverseDirection.x = -carForwardX;
     this.playerRef.crashReverseDirection.z = -carForwardZ;
 

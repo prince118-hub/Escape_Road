@@ -118,56 +118,57 @@ export class WantedSystem {
     if (this.currentWantedLevel >= 3) {
       // Spawn from multiple road directions at high wanted levels
       const roadDirections = [
-        { dx: 0, dz: 1, name: 'north' },   // Road going north
-        { dx: 0, dz: -1, name: 'south' },  // Road going south
-        { dx: 1, dz: 0, name: 'east' },    // Road going east
-        { dx: -1, dz: 0, name: 'west' }    // Road going west
+        { dx: 0, dz: 1, name: "north" }, // Road going north
+        { dx: 0, dz: -1, name: "south" }, // Road going south
+        { dx: 1, dz: 0, name: "east" }, // Road going east
+        { dx: -1, dz: 0, name: "west" }, // Road going west
       ];
-      
-      const direction = roadDirections[Math.floor(Math.random() * roadDirections.length)];
+
+      const direction =
+        roadDirections[Math.floor(Math.random() * roadDirections.length)];
       const spawnDistance = 50 + Math.random() * 30;
-      
+
       // Spawn ON the road lane
-      const laneOffset = (Math.random() < 0.5 ? -4 : 4); // Left or right lane
-      
+      const laneOffset = Math.random() < 0.5 ? -4 : 4; // Left or right lane
+
       if (direction.dx === 0) {
         // Vertical road (north-south)
         spawnPos = {
           x: Math.round(playerPos.x / 100) * 100 + laneOffset, // Snap to nearest road X + lane offset
-          z: playerPos.z + direction.dz * spawnDistance
+          z: playerPos.z + direction.dz * spawnDistance,
         };
       } else {
         // Horizontal road (east-west)
         spawnPos = {
           x: playerPos.x + direction.dx * spawnDistance,
-          z: Math.round(playerPos.z / 100) * 100 + laneOffset  // Snap to nearest road Z + lane offset
+          z: Math.round(playerPos.z / 100) * 100 + laneOffset, // Snap to nearest road Z + lane offset
         };
       }
     } else {
       // Lower levels: spawn on road behind player
       const spawnDistance = 40 + Math.random() * 20;
-      
+
       // Determine which road the player is closest to
       const nearestRoadX = Math.round(playerPos.x / 100) * 100;
       const nearestRoadZ = Math.round(playerPos.z / 100) * 100;
-      
+
       const distToVerticalRoad = Math.abs(playerPos.x - nearestRoadX);
       const distToHorizontalRoad = Math.abs(playerPos.z - nearestRoadZ);
-      
+
       // Choose lane offset (left or right lane)
-      const laneOffset = (Math.random() < 0.5 ? -4 : 4);
-      
+      const laneOffset = Math.random() < 0.5 ? -4 : 4;
+
       if (distToVerticalRoad < distToHorizontalRoad) {
         // Spawn on vertical road
         spawnPos = {
           x: nearestRoadX + laneOffset,
-          z: playerPos.z + spawnDistance
+          z: playerPos.z + spawnDistance,
         };
       } else {
         // Spawn on horizontal road
         spawnPos = {
           x: playerPos.x + spawnDistance,
-          z: nearestRoadZ + laneOffset
+          z: nearestRoadZ + laneOffset,
         };
       }
     }
@@ -176,11 +177,11 @@ export class WantedSystem {
     if (this.cityRef) {
       const buildings = this.cityRef.getBuildings();
       let isValid = true;
-      
+
       for (const building of buildings) {
         const halfWidth = building.geometry.parameters.width / 2 + 5; // 5 unit buffer
         const halfDepth = building.geometry.parameters.depth / 2 + 5;
-        
+
         if (
           spawnPos.x >= building.position.x - halfWidth &&
           spawnPos.x <= building.position.x + halfWidth &&
@@ -191,13 +192,13 @@ export class WantedSystem {
           break;
         }
       }
-      
+
       // If spawn position is invalid, try alternate road
       if (!isValid) {
-        const laneOffset = (Math.random() < 0.5 ? -4 : 4);
+        const laneOffset = Math.random() < 0.5 ? -4 : 4;
         spawnPos = {
           x: Math.round(playerPos.x / 100) * 100 + laneOffset,
-          z: playerPos.z + (50 + Math.random() * 30)
+          z: playerPos.z + (50 + Math.random() * 30),
         };
       }
     }
