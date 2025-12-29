@@ -45,6 +45,9 @@ export class EnemyChaser {
       z: (Math.random() - 0.5) * 4,
     };
     this.blockTimer = 0; // Active cutoff maneuver time
+    this.skidMarkSystem = null; // Skid mark system reference
+    this.skidMarkTimer = 0; // Timer to control skid mark frequency
+    this.previousSpeed = 0; // Track previous speed for acceleration/braking detection
     this._loadAndCreateMesh();
   }
 
@@ -73,7 +76,7 @@ export class EnemyChaser {
       // Use a smaller uniform scale so the police car matches road proportions
       model.scale.set(0.035, 0.035, 0.035);
       // Rotate model to face forward
-  
+
       // Center the model so it sits properly on the road
       model.position.set(0, 0.8, -0.1);
       this.mesh.add(model);
@@ -188,6 +191,46 @@ export class EnemyChaser {
 
     // Update mesh
     this._updateMesh();
+
+    // Create skid marks if conditions are met
+    if (this.skidMarkSystem && this.modelLoaded) {
+      this.skidMarkTimer += deltaTime;
+      // Create marks every 0.05 seconds (20 times per second)
+      if (this.skidMarkTimer >= 0.05) {
+        const currentSpeed = Math.sqrt(
+          this.velocity.x ** 2 + this.velocity.z ** 2
+        );
+        const speedDiff = currentSpeed - this.previousSpeed;
+
+        // Calculate rotation difference (how sharply they're turning)
+        let rotDiff = this.targetRotation - this.rotation;
+        while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
+        while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
+        const steering = Math.abs(rotDiff) / Math.PI; // Normalize to 0-1
+
+        // Police cars skid when:
+        // 1. Rapid acceleration during pursuit
+        const isAccelerating = speedDiff > 0.25 && currentSpeed > 12;
+        // 2. Hard braking to avoid obstacles or cornering
+        const isBraking = speedDiff < -0.25 && currentSpeed > 8;
+        // 3. Sharp turns during aggressive pursuit
+        const isSharpTurn = steering > 0.35 && currentSpeed > 12;
+
+        if (isAccelerating || isBraking || isSharpTurn) {
+          this.skidMarkSystem.addCarSkidMarks(
+            this.position,
+            this.rotation,
+            currentSpeed,
+            steering,
+            isBraking || isAccelerating,
+            isSharpTurn
+          );
+        }
+
+        this.previousSpeed = currentSpeed;
+        this.skidMarkTimer = 0;
+      }
+    }
   }
 
   /**
@@ -344,15 +387,17 @@ export class EnemyChaser {
 
   /**
    * Check and resolve collisions with buildings
+   * Police cars stop smoothly and reroute instead of bouncing
    * @private
    */
   _checkBuildingCollisions(oldX, oldZ) {
     const buildings = this.cityRef.getBuildings();
     const policeBox = this.getBoundingBox();
+    const policeRadius = 2.0;
 
     for (const building of buildings) {
-      const halfWidth = building.geometry.parameters.width / 2;
-      const halfDepth = building.geometry.parameters.depth / 2;
+      const halfWidth = building.geometry.parameters.width / 2 + policeRadius;
+      const halfDepth = building.geometry.parameters.depth / 2 + policeRadius;
 
       const buildingBox = {
         min: {
@@ -374,14 +419,78 @@ export class EnemyChaser {
         policeBox.min.z < buildingBox.max.z &&
         policeBox.max.z > buildingBox.min.z
       ) {
-        // Collision detected - resolve by moving back
+        // Collision detected - SMOOTH STOP AND REROUTE
+
+        // 1. Stop immediately to prevent penetration
         this.position.x = oldX;
         this.position.z = oldZ;
+        this.velocity.x = 0;
+        this.velocity.z = 0;
 
-        // Bounce off in a different direction
-        this.rotation += ((Math.random() - 0.5) * Math.PI) / 2;
-        this.speed *= 0.5; // Slow down after collision
-        break;
+        // 2. Reduce speed smoothly (decelerate, don't stop instantly)
+        this.speed = Math.max(
+          this.speed * 0.3,
+          ENEMY_CONFIG.INITIAL_SPEED * 0.5
+        );
+
+        // 3. Calculate smart reroute direction
+        const buildingCenter = {
+          x: (buildingBox.min.x + buildingBox.max.x) / 2,
+          z: (buildingBox.min.z + buildingBox.max.z) / 2,
+        };
+
+        // Direction away from building
+        const awayX = this.position.x - buildingCenter.x;
+        const awayZ = this.position.z - buildingCenter.z;
+        const awayDist = Math.sqrt(awayX * awayX + awayZ * awayZ);
+
+        if (awayDist > 0.01) {
+          // Calculate perpendicular directions (left and right relative to building)
+          const perpLeftX = -awayZ / awayDist;
+          const perpLeftZ = awayX / awayDist;
+          const perpRightX = awayZ / awayDist;
+          const perpRightZ = -awayX / awayDist;
+
+          // Choose direction that's more aligned with player direction
+          const playerPos = this.playerRef.getPosition();
+          const toPlayerX = playerPos.x - this.position.x;
+          const toPlayerZ = playerPos.z - this.position.z;
+
+          const leftDot = perpLeftX * toPlayerX + perpLeftZ * toPlayerZ;
+          const rightDot = perpRightX * toPlayerX + perpRightZ * toPlayerZ;
+
+          // Choose better direction for pursuit
+          let rerouteX, rerouteZ;
+          if (leftDot > rightDot) {
+            rerouteX = perpLeftX;
+            rerouteZ = perpLeftZ;
+          } else {
+            rerouteX = perpRightX;
+            rerouteZ = perpRightZ;
+          }
+
+          // Blend reroute direction with away-from-building direction for safety
+          const blendFactor = 0.6; // 60% perpendicular, 40% away
+          const finalX =
+            rerouteX * blendFactor + (awayX / awayDist) * (1 - blendFactor);
+          const finalZ =
+            rerouteZ * blendFactor + (awayZ / awayDist) * (1 - blendFactor);
+
+          // Set new rotation to face reroute direction
+          this.rotation = Math.atan2(finalX, finalZ);
+          this.targetRotation = this.rotation;
+        } else {
+          // Fallback: turn around 90 degrees
+          this.rotation += Math.PI / 2;
+          this.targetRotation = this.rotation;
+        }
+
+        // 4. Move slightly away from building to ensure clearance
+        const clearanceDistance = 1.5;
+        this.position.x += Math.sin(this.rotation) * clearanceDistance;
+        this.position.z += Math.cos(this.rotation) * clearanceDistance;
+
+        break; // Handle one collision at a time
       }
     }
   }
@@ -430,16 +539,18 @@ export class EnemyChaser {
    * Get bounding box for collision detection
    */
   getBoundingBox() {
+    // Enlarged bounding box with padding to ensure no pass-through
+    const padding = 0.5; // Extra padding for safety
     return {
       min: {
-        x: this.position.x - ENEMY_CONFIG.WIDTH / 2,
+        x: this.position.x - (ENEMY_CONFIG.WIDTH / 2 + padding),
         y: 0,
-        z: this.position.z - ENEMY_CONFIG.LENGTH / 2,
+        z: this.position.z - (ENEMY_CONFIG.LENGTH / 2 + padding),
       },
       max: {
-        x: this.position.x + ENEMY_CONFIG.WIDTH / 2,
+        x: this.position.x + (ENEMY_CONFIG.WIDTH / 2 + padding),
         y: ENEMY_CONFIG.HEIGHT,
-        z: this.position.z + ENEMY_CONFIG.LENGTH / 2,
+        z: this.position.z + (ENEMY_CONFIG.LENGTH / 2 + padding),
       },
     };
   }
@@ -449,6 +560,13 @@ export class EnemyChaser {
    */
   getPosition() {
     return { ...this.position };
+  }
+
+  /**
+   * Set skid mark system reference
+   */
+  setSkidMarkSystem(system) {
+    this.skidMarkSystem = system;
   }
 
   /**

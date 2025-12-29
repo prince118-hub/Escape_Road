@@ -8,6 +8,7 @@ import * as THREE from "three";
 import { WORLD_CONFIG, COLORS, ROAD_CONFIG } from "../utils/constants.js";
 import { random, randomInt } from "../utils/helpers.js";
 import { CityObstacles } from "./CityObstacles.js";
+import { StreetFurniture } from "./StreetFurniture.js";
 
 export class City {
   constructor(scene) {
@@ -16,8 +17,15 @@ export class City {
     this.tiles = new Map(); // Use Map for efficient tile lookup by grid coordinates
     this.tileSize = WORLD_CONFIG.SIZE;
     this.cityObstacles = new CityObstacles(scene);
-    this.visibleRadius = 3; // Number of tiles to keep visible around player (3x3 = 9 tiles)
+    this.streetFurniture = new StreetFurniture(scene);
+    this.visibleRadius = 2; // Reduced from 3 - fewer tiles loaded (2x2 = 4 tiles)
     this.lastPlayerGrid = { x: 0, z: 0 }; // Track last player grid position
+
+    // Async loading system for smooth performance
+    this.loadQueue = []; // Tiles waiting to load
+    this.loadingTiles = new Set(); // Currently loading tiles
+    this.maxLoadTimePerFrame = 4; // Reduced from 6 - less work per frame
+    this.buildingsPerChunk = 2; // Reduced from 3 - smaller chunks
 
     // Shared materials (reused across all objects to reduce texture/material count)
     this._initSharedMaterials();
@@ -468,7 +476,7 @@ export class City {
   }
 
   /**
-   * Create and add a tile to the scene
+   * Create and add a tile to the scene (sync version for initial load)
    * @private
    */
   _createAndAddTile(gridX, gridZ) {
@@ -482,6 +490,181 @@ export class City {
     const tile = this._createTile(gridX, gridZ);
     this.tiles.set(key, tile);
     return tile;
+  }
+
+  /**
+   * Create tile asynchronously with incremental building loading
+   * @private
+   */
+  _createTileAsync(gridX, gridZ) {
+    const key = this._getTileKey(gridX, gridZ);
+
+    if (this.tiles.has(key)) {
+      this.loadingTiles.delete(key);
+      return;
+    }
+
+    const origin = {
+      x: gridX * this.tileSize,
+      z: gridZ * this.tileSize,
+    };
+
+    const tile = {
+      gridX,
+      gridZ,
+      origin,
+      ground: null,
+      roads: [],
+      buildings: [],
+      props: [],
+    };
+
+    // Fast: Create ground and roads immediately
+    tile.ground = this._createGround(origin);
+    tile.roads = this._createRoadPatches(origin);
+
+    // Slow: Load buildings incrementally
+    this._loadBuildingsAsync(tile);
+
+    this.tiles.set(key, tile);
+    this.loadingTiles.delete(key);
+  }
+
+  /**
+   * Load buildings incrementally using exact zone logic
+   * @private
+   */
+  _loadBuildingsAsync(tile) {
+    const buildingData = this._getBuildingDataForTile(tile.origin);
+    let loaded = 0;
+
+    const loadChunk = () => {
+      const end = Math.min(
+        loaded + this.buildingsPerChunk,
+        buildingData.length
+      );
+
+      for (let i = loaded; i < end; i++) {
+        const data = buildingData[i];
+        const building = this._createBuildingByType(
+          data.type,
+          data.width,
+          data.height,
+          data.depth
+        );
+        building.position.set(data.x, data.height / 2, data.z);
+
+        tile.buildings.push(building);
+        this.buildings.push(building);
+        this.scene.add(building);
+      }
+
+      loaded = end;
+
+      if (loaded < buildingData.length) {
+        requestAnimationFrame(loadChunk);
+      } else {
+        // Buildings complete, add props
+        tile.props = this._createUrbanProps(tile.origin, tile);
+
+        // Add street furniture to ALL tiles so it's visible
+        this._addMinimalStreetFurniture(tile.origin);
+      }
+    };
+
+    requestAnimationFrame(loadChunk);
+  }
+
+  /**
+   * Get building data using EXACT zone logic from _createBuildingsForTile
+   * @private
+   */
+  _getBuildingDataForTile(origin) {
+    const data = [];
+    const roadWidth = 16;
+    const roadBuffer = 5;
+
+    // EXACT SAME ZONES as original
+    const buildingZones = [
+      {
+        xMin: -95,
+        xMax: -roadWidth - roadBuffer,
+        zMin: -95,
+        zMax: -roadWidth - roadBuffer,
+      },
+      {
+        xMin: roadWidth + roadBuffer,
+        xMax: 95,
+        zMin: -95,
+        zMax: -roadWidth - roadBuffer,
+      },
+      {
+        xMin: -95,
+        xMax: -roadWidth - roadBuffer,
+        zMin: roadWidth + roadBuffer,
+        zMax: 95,
+      },
+      {
+        xMin: roadWidth + roadBuffer,
+        xMax: 95,
+        zMin: roadWidth + roadBuffer,
+        zMax: 95,
+      },
+    ];
+
+    const spacing = 35; // Increased from 25 - fewer buildings
+
+    buildingZones.forEach((zone) => {
+      for (let x = zone.xMin + spacing / 2; x < zone.xMax; x += spacing) {
+        for (let z = zone.zMin + spacing / 2; z < zone.zMax; z += spacing) {
+          const actualX = origin.x + x;
+          const actualZ = origin.z + z;
+
+          const buildingType = randomInt(0, 6);
+          const sizeVariation = randomInt(0, 2);
+
+          let width, height, depth;
+
+          if (sizeVariation === 0) {
+            width = randomInt(8, 12);
+            height = random(12, 22);
+          } else if (sizeVariation === 1) {
+            width = randomInt(12, 16);
+            height = random(20, 35);
+          } else {
+            width = randomInt(16, 22);
+            height = random(28, 40);
+          }
+          depth = randomInt(8, 16);
+
+          data.push({
+            x: actualX,
+            z: actualZ,
+            width,
+            height,
+            depth,
+            type: buildingType,
+          });
+        }
+      }
+    });
+
+    return data;
+  }
+
+  /**
+   * Create building by type index
+   * @private
+   */
+  _createBuildingByType(type, width, height, depth) {
+    if (type === 0) return this._createOfficeBuilding(width, height, depth);
+    if (type === 1)
+      return this._createResidentialBuilding(width, height, depth);
+    if (type === 2) return this._createShopBuilding(width, height, depth);
+    if (type === 3) return this._createModernBuilding(width, height, depth);
+    if (type === 4) return this._createBrickBuilding(width, height, depth);
+    if (type === 5) return this._createMetalBuilding(width, height, depth);
+    return this._createConcretePanelBuilding(width, height, depth);
   }
 
   /**
@@ -593,6 +776,9 @@ export class City {
     tile.buildings = this._createBuildingsForTile(origin);
     tile.props = this._createUrbanProps(origin, tile); // Add urban elements
     // Rivers removed
+
+    // Add street furniture to ALL tiles so it's visible
+    this._addMinimalStreetFurniture(origin);
 
     return tile;
   }
@@ -1265,34 +1451,46 @@ export class City {
     const currentGridX = Math.round(playerPosition.x / this.tileSize);
     const currentGridZ = Math.round(playerPosition.z / this.tileSize);
 
+    // Always process load queue
+    this._processLoadQueue();
+
     // Only update tiles if player has moved to a new grid cell
     if (
       currentGridX === this.lastPlayerGrid.x &&
       currentGridZ === this.lastPlayerGrid.z
     ) {
-      return; // No tile updates needed
+      return;
     }
 
     this.lastPlayerGrid.x = currentGridX;
     this.lastPlayerGrid.z = currentGridZ;
 
-    // Determine which tiles should be visible
+    // Queue tiles by distance (load closest first)
     const tilesToKeep = new Set();
-    for (let dx = -this.visibleRadius; dx <= this.visibleRadius; dx++) {
-      for (let dz = -this.visibleRadius; dz <= this.visibleRadius; dz++) {
-        const gridX = currentGridX + dx;
-        const gridZ = currentGridZ + dz;
-        const key = this._getTileKey(gridX, gridZ);
-        tilesToKeep.add(key);
+    const newTiles = [];
 
-        // Create tile if it doesn't exist yet
-        if (!this.tiles.has(key)) {
-          this._createAndAddTile(gridX, gridZ);
+    for (let distance = 0; distance <= this.visibleRadius; distance++) {
+      for (let dx = -distance; dx <= distance; dx++) {
+        for (let dz = -distance; dz <= distance; dz++) {
+          if (Math.abs(dx) === distance || Math.abs(dz) === distance) {
+            const gridX = currentGridX + dx;
+            const gridZ = currentGridZ + dz;
+            const key = this._getTileKey(gridX, gridZ);
+            tilesToKeep.add(key);
+
+            if (!this.tiles.has(key) && !this.loadingTiles.has(key)) {
+              newTiles.push({ gridX, gridZ, distance });
+              this.loadingTiles.add(key);
+            }
+          }
         }
       }
     }
 
-    // Remove tiles that are too far away
+    // Add to queue
+    this.loadQueue.push(...newTiles);
+
+    // Async cleanup of distant tiles
     const tilesToRemove = [];
     for (const [key, tile] of this.tiles.entries()) {
       if (!tilesToKeep.has(key)) {
@@ -1300,10 +1498,55 @@ export class City {
       }
     }
 
-    // Clean up distant tiles to free memory
-    tilesToRemove.forEach(({ gridX, gridZ }) => {
-      this._removeTile(gridX, gridZ);
-    });
+    if (tilesToRemove.length > 0) {
+      this._asyncCleanup(tilesToRemove);
+    }
+
+    // Cleanup distant street furniture (only every ~50 frames for performance)
+    if (Math.random() > 0.98) {
+      this.streetFurniture.cleanup(playerPosition.x, playerPosition.z, 300);
+    }
+  }
+
+  /**
+   * Process load queue with time-slicing
+   * @private
+   */
+  _processLoadQueue() {
+    if (this.loadQueue.length === 0) return;
+
+    const startTime = performance.now();
+    while (
+      this.loadQueue.length > 0 &&
+      performance.now() - startTime < this.maxLoadTimePerFrame
+    ) {
+      const tile = this.loadQueue.shift();
+      this._createTileAsync(tile.gridX, tile.gridZ);
+    }
+  }
+
+  /**
+   * Async cleanup in idle time
+   * @private
+   */
+  _asyncCleanup(tilesToRemove) {
+    const cleanup = () => {
+      const start = performance.now();
+      let i = 0;
+      while (i < tilesToRemove.length && performance.now() - start < 3) {
+        this._removeTile(tilesToRemove[i].gridX, tilesToRemove[i].gridZ);
+        i++;
+      }
+      if (i < tilesToRemove.length) {
+        setTimeout(() => this._asyncCleanup(tilesToRemove.slice(i)), 50);
+      }
+    };
+
+    if (typeof requestIdleCallback !== "undefined") {
+      requestIdleCallback(cleanup, { timeout: 100 });
+    } else {
+      setTimeout(cleanup, 16);
+    }
   }
 
   /**
@@ -1315,13 +1558,16 @@ export class City {
     const roadWidth = 16;
     const roadBuffer = 5;
 
-    // Add streetlights ONLY at crossings (intersections)
-    props.push(...this._createStreetlights(origin, roadWidth));
+    // Reduced props - only add occasionally for performance
+    if (Math.random() > 0.7) {
+      // Only 30% of tiles get lights
+      props.push(...this._createStreetlights(origin, roadWidth));
+    }
 
-    // NO parked cars - removed for cleaner look
-
-    // Add urban furniture (benches, trees, signs)
-    props.push(...this._createUrbanFurniture(origin, roadWidth, roadBuffer));
+    // Minimal furniture - only 20% of tiles
+    if (Math.random() > 0.8) {
+      props.push(...this._createUrbanFurniture(origin, roadWidth, roadBuffer));
+    }
 
     return props;
   }
@@ -1334,12 +1580,9 @@ export class City {
     const lights = [];
     const offset = roadWidth / 2 + 2;
 
-    // Only place lights at the intersection (center crossing)
-    // Four corners of the intersection
+    // Only 2 lights per intersection instead of 4
     const cornerPositions = [
       { x: origin.x - offset, z: origin.z - offset }, // Top-left
-      { x: origin.x + offset, z: origin.z - offset }, // Top-right
-      { x: origin.x - offset, z: origin.z + offset }, // Bottom-left
       { x: origin.x + offset, z: origin.z + offset }, // Bottom-right
     ];
 
@@ -1357,31 +1600,25 @@ export class City {
   _createStreetlight(x, z) {
     const group = new THREE.Group();
 
-    // Pole
-    const poleGeometry = new THREE.CylinderGeometry(0.15, 0.2, 6, 8);
+    // Simplified pole with fewer segments
+    const poleGeometry = new THREE.CylinderGeometry(0.12, 0.15, 5, 6); // Reduced from 8 to 6 segments
     const poleMaterial = new THREE.MeshLambertMaterial({ color: 0x404040 });
     const pole = new THREE.Mesh(poleGeometry, poleMaterial);
-    pole.position.y = 3;
-    pole.castShadow = true;
+    pole.position.y = 2.5;
     group.add(pole);
 
-    // Light housing
-    const housingGeometry = new THREE.BoxGeometry(0.6, 0.4, 0.6);
+    // Simplified light housing
+    const housingGeometry = new THREE.BoxGeometry(0.5, 0.3, 0.5);
     const housingMaterial = new THREE.MeshLambertMaterial({ color: 0x303030 });
     const housing = new THREE.Mesh(housingGeometry, housingMaterial);
-    housing.position.y = 6.2;
-    housing.castShadow = true;
+    housing.position.y = 5.2;
     group.add(housing);
 
-    // Light bulb (emissive)
-    const bulbGeometry = new THREE.BoxGeometry(0.5, 0.2, 0.5);
-    const bulbMaterial = new THREE.MeshLambertMaterial({
-      color: 0xfff8dc,
-      emissive: 0xfff8dc,
-      emissiveIntensity: 0.3,
-    });
+    // Light bulb (emissive) - no point light for performance
+    const bulbGeometry = new THREE.BoxGeometry(0.4, 0.15, 0.4);
+    const bulbMaterial = new THREE.MeshBasicMaterial({ color: 0xffffdd }); // Basic material, no emissive
     const bulb = new THREE.Mesh(bulbGeometry, bulbMaterial);
-    bulb.position.y = 6;
+    bulb.position.y = 5;
     group.add(bulb);
 
     group.position.set(x, 0, z);
@@ -1526,6 +1763,80 @@ export class City {
   }
 
   /**
+   * Add minimal street furniture to intersection (very sparse)
+   * @private
+   */
+  _addMinimalStreetFurniture(origin) {
+    const roadWidth = ROAD_CONFIG.SEGMENT_WIDTH;
+    const offset = roadWidth / 2 + 2.5;
+
+    // Always add street lights
+    this.streetFurniture.createIntersectionLights(
+      origin.x,
+      origin.z,
+      roadWidth
+    );
+
+    // Add realistic traffic lights at intersection
+    this.streetFurniture.createIntersectionTrafficLights(
+      origin.x,
+      origin.z,
+      roadWidth
+    );
+
+    // Add ALL 4 crosswalks (complete intersection coverage)
+    // North crosswalk
+    this.streetFurniture.createCrosswalk(
+      origin.x,
+      origin.z - offset,
+      roadWidth,
+      true
+    );
+
+    // South crosswalk
+    this.streetFurniture.createCrosswalk(
+      origin.x,
+      origin.z + offset,
+      roadWidth,
+      true
+    );
+
+    // East crosswalk
+    this.streetFurniture.createCrosswalk(
+      origin.x + offset,
+      origin.z,
+      roadWidth,
+      false
+    );
+
+    // West crosswalk
+    this.streetFurniture.createCrosswalk(
+      origin.x - offset,
+      origin.z,
+      roadWidth,
+      false
+    );
+
+    // More visible signs (70% chance)
+    if (Math.random() > 0.3) {
+      const signOffset = roadWidth / 2 + 1.2;
+      this.streetFurniture.createTrafficSign(
+        origin.x + signOffset,
+        origin.z - signOffset - 4,
+        "stop"
+      );
+    }
+
+    // Add bus stops occasionally
+    if (Math.random() > 0.6) {
+      this.streetFurniture.createBusStop(
+        origin.x + roadWidth / 2 + 3,
+        origin.z + 10
+      );
+    }
+  }
+
+  /**
    * Cleanup resources
    */
   dispose() {
@@ -1559,6 +1870,11 @@ export class City {
     // Cleanup city obstacles
     if (this.cityObstacles) {
       this.cityObstacles.dispose();
+    }
+
+    // Cleanup street furniture
+    if (this.streetFurniture) {
+      this.streetFurniture.dispose();
     }
 
     // Clear the tiles Map

@@ -17,6 +17,7 @@ import { DifficultyManager } from "./systems/DifficultyManager.js";
 import { EffectsSystem } from "./systems/EffectsSystem.js";
 import { SoundSystem } from "./systems/SoundSystem.js";
 import { WantedSystem } from "./systems/WantedSystem.js";
+import { SkidMarkSystem } from "./systems/SkidMarkSystem.js";
 import { InputManager } from "./controls/InputManager.js";
 import { CameraController } from "./controls/CameraController.js";
 import { HUD } from "./ui/HUD.js";
@@ -46,6 +47,7 @@ class Game {
     this.effectsSystem = null;
     this.soundSystem = null;
     this.wantedSystem = null;
+    this.skidMarkSystem = null;
 
     // Controls
     this.inputManager = null;
@@ -165,6 +167,7 @@ class Game {
     console.log("⚙️ Creating game systems...");
     this.effectsSystem = new EffectsSystem(scene);
     this.soundSystem = new SoundSystem();
+    this.skidMarkSystem = new SkidMarkSystem(scene);
     this.collisionSystem = new CollisionSystem(
       this.player,
       this.enemies,
@@ -176,13 +179,20 @@ class Game {
     this.scoreSystem = new ScoreSystem(this.player);
     this.difficultyManager = new DifficultyManager(this.enemies);
 
+    // Pass skid mark system to player and enemies
+    this.player.setSkidMarkSystem(this.skidMarkSystem);
+    this.enemies.forEach((enemy) =>
+      enemy.setSkidMarkSystem(this.skidMarkSystem)
+    );
+
     // Create wanted system for dynamic police spawning
     this.wantedSystem = new WantedSystem(
       scene,
       this.player,
       this.enemies, // Pass enemies array reference so WantedSystem can add to it
       WANTED_CONFIG,
-      this.city // Pass city reference for building collision
+      this.city, // Pass city reference for building collision
+      this.skidMarkSystem // Pass skid mark system to wanted system
     );
     console.log("✅ All game systems created");
 
@@ -275,6 +285,7 @@ class Game {
     this.difficultyManager.update(deltaTime);
     this.effectsSystem.update(deltaTime);
     this.wantedSystem.update(deltaTime); // Update wanted system for dynamic police spawning
+    this.skidMarkSystem.update(deltaTime); // Update skid marks for fading
 
     // Update camera
     this.cameraController.update(deltaTime);
@@ -461,6 +472,15 @@ class Game {
       }
     } catch (error) {
       console.error("Error disposing traffic manager:", error);
+    }
+
+    try {
+      if (this.skidMarkSystem) {
+        console.log("Disposing skid mark system...");
+        this.skidMarkSystem.dispose();
+      }
+    } catch (error) {
+      console.error("Error disposing skid mark system:", error);
     }
 
     console.log("✅ All game objects cleaned up");

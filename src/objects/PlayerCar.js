@@ -12,7 +12,6 @@ export class PlayerCar {
     this.rotation = Math.PI; // Start facing forward (negative Z direction) - Math.PI = 180 degrees
     this.speed = 0; // Current speed (starts at 0, accelerates over time)
     this.targetSpeed = 0; // Target speed to accelerate towards
-    this.health = PLAYER_CONFIG.MAX_HEALTH;
     this.isAlive = true;
     this.boostActive = false;
     this.boostCooldownRemaining = 0;
@@ -29,14 +28,16 @@ export class PlayerCar {
     this.modelLoaded = false;
     this.isFalling = false;
     this.fallSpeed = 0;
+    this.skidMarkSystem = null; // Skid mark system reference
+    this.skidMarkTimer = 0; // Timer to control skid mark frequency
+    this.previousSpeed = 0; // Track previous speed for acceleration/braking detection
     // Building collision crash state (physics-based crash system)
     this.isCrashed = false;
     this.crashStunTimer = 0; // Brief moment of being stunned after crash
     this.crashReverseTimer = 0; // Auto-reverse after stun
     this.crashReverseDirection = { x: 0, z: 0 };
-    // Caught by police state
-    this.isCaught = false;
-    this.caughtTimer = 0;
+    // Trapped state (completely cornered with no escape)
+    this.isTrapped = false;
     this._loadAndCreateMesh();
   }
 
@@ -123,15 +124,9 @@ export class PlayerCar {
   update(deltaTime) {
     if (!this.isAlive || !this.modelLoaded || !this.mesh) return;
 
-    // Handle caught state countdown
-    if (this.isCaught) {
-      this.caughtTimer -= deltaTime;
-      if (this.caughtTimer <= 0) {
-        // Finally caught after 3 seconds
-        this.die();
-      }
-      // Disable input while being caught
-      this._updateMesh();
+    // Handle trapped state (fully cornered with no escape)
+    if (this.isTrapped) {
+      this.die();
       return;
     }
 
@@ -164,26 +159,57 @@ export class PlayerCar {
         return;
       }
 
-      // Phase 2: Auto-reverse - car automatically backs away from building
+      // Phase 2: Auto-reverse - smooth controlled backing away
       if (this.crashReverseTimer > 0) {
-        const reverseSpeed = 20; // Very fast escape
-        this.position.x +=
-          this.crashReverseDirection.x * reverseSpeed * deltaTime;
-        this.position.z +=
-          this.crashReverseDirection.z * reverseSpeed * deltaTime;
+        const maxReverseSpeed = 12; // Controlled reverse speed
+        const reverseProgress = 1.0 - this.crashReverseTimer / 0.8; // 0 to 1
 
-        this.velocity.x = 0;
-        this.velocity.z = 0;
-        this.speed = 0;
+        // Smooth acceleration curve: slow start, peak in middle, slow end
+        let speedMultiplier;
+        if (reverseProgress < 0.3) {
+          // Accelerate smoothly (0 to 1)
+          speedMultiplier = reverseProgress / 0.3;
+        } else if (reverseProgress > 0.7) {
+          // Decelerate smoothly (1 to 0)
+          speedMultiplier = (1.0 - reverseProgress) / 0.3;
+        } else {
+          // Constant speed in middle
+          speedMultiplier = 1.0;
+        }
 
+        const currentReverseSpeed = maxReverseSpeed * speedMultiplier;
+
+        // Normalize reverse direction to ensure consistent movement
+        const dirLength = Math.sqrt(
+          this.crashReverseDirection.x ** 2 + this.crashReverseDirection.z ** 2
+        );
+
+        if (dirLength > 0.01) {
+          const normX = this.crashReverseDirection.x / dirLength;
+          const normZ = this.crashReverseDirection.z / dirLength;
+
+          // Move strictly along reverse direction - no sliding
+          this.position.x += normX * currentReverseSpeed * deltaTime;
+          this.position.z += normZ * currentReverseSpeed * deltaTime;
+
+          // Keep velocity synced for collision system
+          this.velocity.x = normX * currentReverseSpeed;
+          this.velocity.z = normZ * currentReverseSpeed;
+        }
+
+        this.speed = 0; // Prevent normal speed from interfering
         this.crashReverseTimer -= deltaTime;
 
         if (this.crashReverseTimer <= 0) {
-          // Crash recovery complete - return to normal
+          // Crash recovery complete - smooth transition back to normal
           this.isCrashed = false;
           this.crashReverseTimer = 0;
           this.crashStunTimer = 0;
           this.crashReverseDirection = { x: 0, z: 0 };
+
+          // Gradual velocity decay instead of instant stop
+          this.velocity.x *= 0.3;
+          this.velocity.z *= 0.3;
         }
 
         this._updateMesh();
@@ -195,6 +221,46 @@ export class PlayerCar {
     this._applyInput(deltaTime);
     this._updatePosition(deltaTime);
     this._updateMesh();
+
+    // Create skid marks if conditions are met
+    if (this.skidMarkSystem && this.modelLoaded) {
+      this.skidMarkTimer += deltaTime;
+      // Create marks every 0.05 seconds (20 times per second) for smooth trails
+      if (this.skidMarkTimer >= 0.05) {
+        const speedDiff = this.speed - this.previousSpeed;
+        const absSpeed = Math.abs(this.speed);
+
+        // Detect realistic braking (any deceleration at moderate speed)
+        const isBraking =
+          (speedDiff < -0.1 && absSpeed > 6) || this.input.backward;
+
+        // Detect rapid acceleration (boost or initial acceleration)
+        const isAccelerating =
+          (speedDiff > 0.15 && absSpeed > 8) || this.boostActive;
+
+        // Get steering input
+        const steering = (this.input.left ? 1 : 0) - (this.input.right ? 1 : 0);
+
+        // Detect sharp turn (steering at moderate to high speed)
+        const isSharpTurn = Math.abs(steering) > 0.3 && absSpeed > 10;
+
+        // Only create marks if one of the realistic conditions is met
+        if (isBraking || isAccelerating || isSharpTurn) {
+          this.skidMarkSystem.addCarSkidMarks(
+            this.position,
+            this.rotation,
+            this.speed,
+            steering,
+            isBraking || isAccelerating,
+            isSharpTurn
+          );
+        }
+
+        this.previousSpeed = this.speed;
+        this.skidMarkTimer = 0;
+      }
+    }
+
     const distDelta =
       Math.sqrt(
         this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z
@@ -292,19 +358,28 @@ export class PlayerCar {
     this.boostActive = true;
     this.boostTimeRemaining = PLAYER_CONFIG.BOOST_DURATION;
     // Create boost glow by brightening the car color
-    this.mesh.children[0].material.color.setHex(0xff6633);
+    if (
+      this.mesh &&
+      this.mesh.children[0] &&
+      this.mesh.children[0].material &&
+      this.mesh.children[0].material.color
+    ) {
+      this.mesh.children[0].material.color.setHex(0xff6633);
+    }
   }
 
   deactivateBoost() {
     this.boostActive = false;
     this.boostCooldownRemaining = PLAYER_CONFIG.BOOST_COOLDOWN;
     // Restore original car color
-    this.mesh.children[0].material.color.setHex(COLORS.PLAYER_CAR);
-  }
-
-  takeDamage(amount) {
-    this.health = Math.max(0, this.health - amount);
-    if (this.health <= 0) this.die();
+    if (
+      this.mesh &&
+      this.mesh.children[0] &&
+      this.mesh.children[0].material &&
+      this.mesh.children[0].material.color
+    ) {
+      this.mesh.children[0].material.color.setHex(COLORS.PLAYER_CAR);
+    }
   }
 
   die() {
@@ -312,10 +387,9 @@ export class PlayerCar {
     this.speed = 0;
   }
 
-  setCaught() {
-    if (!this.isCaught) {
-      this.isCaught = true;
-      this.caughtTimer = 3.0; // 3 second countdown
+  setTrapped() {
+    if (!this.isTrapped) {
+      this.isTrapped = true;
     }
   }
 
@@ -348,16 +422,18 @@ export class PlayerCar {
   }
 
   getBoundingBox() {
+    // Enlarged bounding box with padding to ensure no pass-through
+    const padding = 0.5; // Extra padding for safety
     return {
       min: {
-        x: this.position.x - PLAYER_CONFIG.WIDTH / 2,
+        x: this.position.x - (PLAYER_CONFIG.WIDTH / 2 + padding),
         y: 0,
-        z: this.position.z - PLAYER_CONFIG.LENGTH / 2,
+        z: this.position.z - (PLAYER_CONFIG.LENGTH / 2 + padding),
       },
       max: {
-        x: this.position.x + PLAYER_CONFIG.WIDTH / 2,
+        x: this.position.x + (PLAYER_CONFIG.WIDTH / 2 + padding),
         y: PLAYER_CONFIG.HEIGHT,
-        z: this.position.z + PLAYER_CONFIG.LENGTH / 2,
+        z: this.position.z + (PLAYER_CONFIG.LENGTH / 2 + padding),
       },
     };
   }
@@ -365,14 +441,16 @@ export class PlayerCar {
   setInput(input) {
     this.input = { ...input };
   }
+
+  setSkidMarkSystem(system) {
+    this.skidMarkSystem = system;
+  }
+
   getPosition() {
     return { ...this.position };
   }
   getSpeed() {
     return Math.abs(this.speed);
-  }
-  getHealthPercent() {
-    return (this.health / PLAYER_CONFIG.MAX_HEALTH) * 100;
   }
   canBoost() {
     return this.boostCooldownRemaining <= 0;
