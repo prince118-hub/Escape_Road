@@ -1,171 +1,196 @@
-# Chase Escape 🚗💨
+# Escape Road
 
-A 3D car-chase survival game built with **Three.js** using clean, modular architecture.
+A high-intensity 3D car chase survival game built with Three.js, where players must evade an escalating police pursuit through a dynamic urban environment.
 
-## 🎮 Game Overview
+## Overview
 
-Outrun the police while avoiding obstacles on an infinite highway. Difficulty increases over time as enemy speed and obstacle frequency ramp up. Use your boost wisely to survive as long as possible!
+Escape Road is an action-packed, browser-based 3D game that combines fast-paced driving mechanics with survival gameplay. Built using modern web technologies and the Three.js graphics library, the game delivers an immersive experience where players navigate through city streets, dodging obstacles and outrunning police cars in an endless chase.
 
-## 🎯 Features
+The game features a sophisticated wanted system inspired by classic open-world games, where the intensity of police pursuit increases the longer you survive. With dynamic difficulty scaling, realistic physics, traffic simulation, and a rich visual environment including city buildings, street furniture, and desert landscapes, Escape Road challenges players to test their reflexes and strategic decision-making under pressure.
 
-- **Infinite procedural road** with seamless segment recycling
-- **Dynamic AI enemy** that adapts to player behavior
-- **Obstacle system** with static and moving hazards
-- **Progressive difficulty** scaling
-- **Score system** with distance, survival time, and near-miss bonuses
-- **Boost mechanic** with cooldown management
-- **Smooth camera** following system
-- **Responsive HUD** with health, score, and boost indicators
+## Game Concept
 
-## 🏗️ Architecture
+Escape Road is an endless runner-style survival game with the following core mechanics:
 
-This project follows **clean software engineering principles**:
+- **Omnidirectional Movement**: Drive freely in any direction using WASD controls with smooth steering and acceleration
+- **Dynamic Wanted System**: Police pursuit intensity escalates over time, spawning additional police cars as your wanted level increases (1-5 stars)
+- **Boost Mechanic**: Strategic nitro boost system with cooldown management for quick escapes
+- **Environmental Hazards**: Navigate through traffic, obstacles (barrels, cones), and city structures
+- **Progressive Difficulty**: The game becomes increasingly challenging with faster police, more obstacles, and heightened pursuit
+- **Score System**: Earn points based on survival time and distance traveled
 
-```
-/src
-├── core/               # Engine, rendering, game loop
-│   ├── GameEngine.js
-│   └── GameLoop.js
-├── objects/            # Game entities (player, enemy, obstacles)
-│   ├── PlayerCar.js
-│   ├── EnemyChaser.js
-│   ├── Road.js
-│   └── Obstacle.js
-├── systems/            # Game logic systems
-│   ├── ObstacleSpawner.js
-│   ├── CollisionSystem.js
-│   ├── ScoreSystem.js
-│   └── DifficultyManager.js
-├── controls/           # Input and camera
-│   ├── InputManager.js
-│   └── CameraController.js
-├── ui/                 # User interface
-│   ├── HUD.js
-│   └── MenuSystem.js
-├── utils/              # Helpers and constants
-│   ├── constants.js
-│   └── helpers.js
-└── main.js             # Entry point
-```
+## Storyline
 
-### Key Design Principles
+You're a street racer who caught the attention of law enforcement during an illegal midnight run through the city. What started as a routine police encounter has escalated into an all-out chase. With sirens wailing behind you and the wanted level rising by the minute, your only objective is survival.
 
-✅ **Separation of concerns** - Each module has a single responsibility  
-✅ **Modular architecture** - Easy to extend and maintain  
-✅ **No global state** - All state is encapsulated  
-✅ **Object pooling** - Performance-optimized obstacle spawning  
-✅ **Event-driven** - Callbacks for collision, scoring, and difficulty events  
-✅ **Configurable** - All game parameters in `constants.js`
+**Your Role**: An anonymous driver behind the wheel of a high-performance vehicle, desperately trying to evade capture.
 
-## 🚀 Getting Started
+**Your Objective**: Survive as long as possible, racking up distance and evading the increasingly aggressive police pursuit. Navigate through city streets, avoid obstacles, outmaneuver traffic, and use your boost strategically to stay ahead of the law. The longer you survive, the higher your wanted level climbs, bringing more heat down on you. Can you escape the road, or will the chase finally catch up to you?
 
-### Option 1: Simple HTTP Server
+## Features
+
+- **3D Graphics**: Powered by Three.js with optimized rendering for smooth performance
+- **Realistic Physics**: Momentum-based movement with drift mechanics and skid marks
+- **AI Pursuit**: Intelligent police cars that adapt their strategy based on player position
+- **Sound System**: Background music and sound effects for an immersive experience
+- **Visual Effects**: Particle systems, skid marks, and dynamic camera following
+- **Progressive Gameplay**: Difficulty scales with survival time through the DifficultyManager
+- **Multiple Environments**: City landscape with buildings and desert terrain
+- **Traffic System**: Dynamic traffic cars that add complexity to navigation
+- **Responsive UI**: HUD displaying speed, score, wanted level, and boost status
+
+## Installation and Setup
+
+### Prerequisites
+
+Before running the project, ensure you have the following installed:
+
+- **Node.js** (version 14.x or higher) - [Download here](https://nodejs.org/)
+- **npm** (comes with Node.js) or **yarn** package manager
+- A modern web browser (Chrome, Firefox, Edge, or Safari)
+
+### Installation Steps
+
+1. **Clone or Download the Repository**
+
+   ```bash
+   git clone <repository-url>
+   cd Escape_Road
+   ```
+
+2. **Install Dependencies**
+
+   Navigate to the project directory and install the required packages:
+
+   ```bash
+   npm install
+   ```
+
+   This will install:
+
+   - Three.js (3D graphics library)
+   - Vite (development server and build tool)
+
+3. **Verify Installation**
+
+   Ensure all dependencies are properly installed by checking your `node_modules` folder.
+
+## Running the Game
+
+### Development Mode
+
+To run the game in development mode with hot-reload:
 
 ```bash
-# Serve with Python
-npm run serve
-# Or use any HTTP server
-python -m http.server 8000
-```
-
-Open `http://localhost:8000` in your browser.
-
-### Option 2: Using Vite (Recommended)
-
-```bash
-# Install dependencies
-npm install
-
-# Run development server
 npm run dev
+```
 
-# Build for production
+This will start the Vite development server. The game will be available at:
+
+```
+http://localhost:5173
+```
+
+The browser should automatically open. If not, manually navigate to the URL above.
+
+### Production Build
+
+To create an optimized production build:
+
+```bash
 npm run build
 ```
 
-## 🎮 Controls
+The optimized files will be generated in the `dist` folder.
 
-| Key               | Action             |
-| ----------------- | ------------------ |
-| **↑ / W**         | Accelerate forward |
-| **← / → / A / D** | Steer left/right   |
-| **SPACE**         | Activate boost     |
-| **ESC / P**       | Pause game         |
+### Preview Production Build
 
-## 📦 Dependencies
+To preview the production build locally:
 
-- **Three.js** ^0.160.0 - 3D rendering engine
-- **Vite** (dev) - Development server and build tool
-
-## 🔧 Configuration
-
-All game parameters are centralized in [src/utils/constants.js](src/utils/constants.js):
-
-- Player speed, steering, boost settings
-- Enemy AI behavior and aggression
-- Obstacle spawn rates and types
-- Difficulty progression
-- Scoring multipliers
-- Visual colors and camera settings
-
-## 🎨 Extending the Game
-
-### Adding New Obstacle Types
-
-1. Add configuration to `OBSTACLE_CONFIG` in `constants.js`
-2. Extend `Obstacle.js` with new geometry in `_createMesh()`
-3. Update spawner logic in `ObstacleSpawner.js`
-
-### Modifying Difficulty
-
-Edit `DIFFICULTY_CONFIG.STAGES` in `constants.js` to customize:
-
-- Enemy speed per level
-- Obstacle spawn rate
-- Difficulty increase intervals
-
-### Adding Power-ups
-
-1. Create new class in `/src/objects/PowerUp.js`
-2. Add spawner in `/src/systems/PowerUpSpawner.js`
-3. Handle collection in `CollisionSystem.js`
-
-## 🐛 Debugging
-
-The game instance is available globally as `window.game` for debugging:
-
-```javascript
-// In browser console:
-window.game.player.speed = 100; // Super speed!
-window.game.player.health = 100; // Full health
-window.game.difficultyManager.currentLevel = 5; // Jump to level 5
+```bash
+npm run preview
 ```
 
-## 📝 TODO / Future Enhancements
+### Alternative Method (Simple HTTP Server)
 
-- [ ] Add power-ups (shield, invincibility, score multiplier)
-- [ ] Implement leaderboard with localStorage
-- [ ] Add sound effects and background music
-- [ ] Particle effects for collisions and boosts
-- [ ] Multiple vehicle options with different stats
-- [ ] Day/night cycle with visual changes
-- [ ] Mobile touch controls support
-- [ ] Procedural building generation for scenery
-- [ ] Custom shaders for road and effects
+If you prefer using Python's built-in HTTP server:
 
-## 🤝 Contributing
+```bash
+npm run serve
+```
 
-This codebase is designed for team collaboration:
+This starts a server on `http://localhost:8000`
 
-1. Each module is self-contained
-2. Clear interfaces between systems
-3. Comments explain design decisions
-4. Easy to test individual components
+## How to Play
 
-## 📄 License
+### Controls
 
-MIT License - feel free to use and modify!
+- **W** - Accelerate forward
+- **S** - Brake / Reverse
+- **A** - Steer left
+- **D** - Steer right
+- **SPACE** - Activate nitro boost (when available)
+- **ESC** - Pause game
+
+### Gameplay Tips
+
+1. **Manage Your Boost**: The boost has a cooldown - use it strategically to escape tight situations
+2. **Watch Your Wanted Level**: More stars mean more aggressive police pursuit
+3. **Avoid Obstacles**: Collisions will slow you down and make you vulnerable
+4. **Navigate Traffic**: Traffic cars move in lanes - anticipate their movement
+5. **Use the Environment**: Use buildings and obstacles to break line of sight with police
+6. **Keep Moving**: Staying stationary makes you an easy target
+
+### Objective
+
+Survive as long as possible while evading police. Your score increases with distance traveled. The game ends when police cars catch you or you take too much damage.
+
+## Project Structure
+
+```
+Escape_Road/
+├── index.html              # Entry HTML file
+├── package.json            # Dependencies and scripts
+├── vite.config.js          # Vite configuration
+├── src/
+│   ├── main.js             # Game entry point
+│   ├── core/               # Core engine (renderer, game loop)
+│   ├── objects/            # Game entities (player, enemies, environment)
+│   ├── systems/            # Game logic (collision, scoring, difficulty)
+│   ├── controls/           # Input and camera management
+│   ├── ui/                 # HUD and menu systems
+│   └── utils/              # Constants and helper functions
+├── public/
+│   └── model/              # 3D models (GLTF/GLB files)
+└── assets/                 # Additional game assets
+```
+
+## Technologies Used
+
+- **Three.js** (v0.160.0) - 3D graphics rendering
+- **Vite** (v5.0.0) - Build tool and development server
+- **JavaScript (ES6+)** - Core programming language
+- **HTML5 Canvas** - Rendering surface
+- **CSS3** - UI styling
+
+## Development
+
+The project follows a modular architecture with clear separation of concerns:
+
+- **Core Systems**: GameEngine handles Three.js setup, GameLoop manages the update cycle
+- **Game Objects**: PlayerCar, EnemyChaser, City, Desert, TrafficCar
+- **Game Systems**: CollisionSystem, WantedSystem, ScoreSystem, DifficultyManager, EffectsSystem
+- **Controls**: InputManager for keyboard input, CameraController for camera following
+- **UI**: HUD for in-game display, MenuSystem for menus
+
+For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Authors
+
+**ITE18 Project Team**
+
+This project was developed as part of an academic assignment. All team members contributed to the design, development, and testing of the game.
 
 ---
 
-**Built with ❤️ using Three.js and clean code principles**
+_Escape Road_ - Where every second counts and the chase never ends.
